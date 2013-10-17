@@ -1,0 +1,103 @@
+% preamble
+\documentclass[a4paper]{article}
+\usepackage{cite}
+
+% Beginning of document
+\begin{document}
+\input{./proposal_title.tex}
+
+\section{Introduction}
+\label{sec:introduction}
+Functional programming languages/concepts are becoming far more widespread and important in recent times. Object orientated and imperative languages like C++ and Java are beginning to use fundamental functional concepts such as type inference, first-class functions and more. The C++11 specification defines a new `auto' type which causes the compiler to infer the variable type from its content\footnote{Thinking of the most suitable reference location for this, draft specification?}. Furthermore, Java 1.8 now includes Lambda expressions in conjunction with a range of modifications to the libraries that allow its use\footnote{Lambda Expressions in Java 8: http://docs.oracle.com/javase/tutorial/java/javaOO/lambdaexpressions.html}. Even companies like Jane Street - a quantitative trading firm - use solely Ocaml for all their high performance trading software and algorithms\footnote{Jane Street Technology: http://janestreet.com/technology/}, and contribute to the advancement of Ocaml code immensely including providing funding for the Ocaml Labs here at the University of Cambridge.
+
+Ocaml is a great example of a powerful and robust functional language. It includes everything you would expect from a functional language and more including object orientated and imperative programming paradigms, and is derived from the highly expressive ML programming language. It's powerful type system provides great type safety, ruling out many type associated runtime errors; automatic memory management through it's garbage collector and strict evaluation through it's ML roots in theorem proving. Concurrency in Ocaml is however limited due to a global runtime lock present in the system. This lock is present to prevent unsafe use of non re-entrant code within the core Ocaml library, but more importantly due to the fact the Ocaml garbage collector is not parallelised. The result of the lock is that only one piece of Ocaml code may be executed at a time leading to very little multi-core capabilities.   
+
+Java on the other hand is a widely supported, widely available software platform and programming language used in devices like desktop/laptop PC's, mobile phones, ATM's and even credit/debit cards\footnote{About Java: http://www.java.com/en/about/}. It's huge community of developers, wide selection of libraries and ability to be write easily distributable ported software means it has continued to grow rapidly over the years. Java also has a thread safe concurrency library which works in conjunction with its parallel and concurrent G1 garbage collector\footnote{Haven't said anything bad about Java but I reckon I should to emphasise that Ocaml-Java aims to bring the best of both worlds together}.
+
+Both languages have their pros and cons and the Ocaml-Java project aims to bring the best of both languages together by compiling Ocaml to Java bytecode, taking advantage of Ocaml's powerful typing system and Java's feature rich library. In addition, Ocaml-Java uses Java's G1 garbage collector meaning that Java bytecode compiled Ocaml is able to run in parallel across multiple cores without restriction. Ocaml-Java comes with a relatively low-level concurrency library which allows developers to utilise the new Ocaml multi-core abilities, however there are very popular fully featured concurrency libraries in use today with many more features than Ocaml-Java's low-level library and which are far easier to use.\footnote{I feel like this whole section is a bit waffley but I was trying to get the same density as some of the model dissertation proposals}.
+
+\section{Substance and Structure of the Project}
+\label{sec:substance}
+
+What are you going to do?
+
+This project aims to port a very popular Ocaml concurrency library - Ocsigen's Light Weight Threads (LWT) - to use Ocaml-Java's low-level concurrency library, therefore allowing software written using LWT to be compiled under Ocaml-Java and utilise Java's multi-core processing capabilities. The ported library will provide an easier means of writing concurrent code for Ocaml-Java whilst also allowing the ability to determine the increased processing speed and increased scaling capacity of standard Ocaml software and code. The project will produce an interesting insight into the potential Ocaml has as a fully supported multi-core processing language without the use of multiple separately spawned processes. The increased scalability of code written in LWT under Ocaml-Java in comparison with natively compiled/interpreted code can be measured by utilising test machines with many cores - such as the difference running the code on a dual-core, quad-core and 48-core machine.
+
+Porting the software will consist of small stages of change, beginning with the core library consisting of Threads, basic spawn and termination functions, etc. Building up from here to include the mutexes and other common concurrency paradigms.
+
+\section{Success Criteria}
+\label{sec:success}
+For the project to be a success I have set the following requirements:
+\begin{enumerate}
+\item{I am able to show the scalability difference between two programs using the same piece of LWT code, one compiled using the original LWT libraries under the normal Ocaml compiler and one compiled using my ported LWT libraries under Ocaml-Java, running on the JVM.}
+\item{Many standard algorithms with parallelised examples can be shown to work faster in LWT under Ocaml-Java, with the difference in scalability measured}
+\item{Industry standard parallel processing benchmarks can be used to determine the difference in parallel processing using LWT under Ocaml-Java and using LWT under the normal environment}
+\item{Many of the LWT features implemented and working\footnote{Perhaps mention to the extent I could take some relatively simple program written with LWT and compile it using my library without much effort.}}
+\end{enumerate}
+
+\section{Starting Point}
+\label{sec:starting}
+My experience in functional programming extends as far as the ML courses in Part IA, however I enjoyed completing Project Euler challenges in ML (of which I was normally one of the few people to do so!). Neither have I developed code of a substantial size in ML or Ocaml, therefore the best place place to begin would be looking into the structure of open source Ocaml code and get a feel for how things are laid out in Ocaml. In addition `Real World Ocaml' (Anil et al, 2013) has a public beta available before publication (lucky for me) which will also provide a solid foundation in producing real world Ocaml code.
+
+Finally getting to grips with the innards of LWT will be most easily achievable by experimenting with the software first hand and diving into the source code available on Github.
+
+\section{Optional Extensions}
+\label{sec:optional}
+Some ideas for optional extensions include:
+\begin{itemize}
+\item{Implement some of the more complex LWT modules\footnote{I don't know how far I am aiming to get in this. I need to under promise and over provide}.}
+\item{Attempt to get higher compatibility rate than initially decided which would mean ironing out incompatibilities with current software written with LWT when run with my ported libraries.}
+\end{itemize}
+
+\section{Timetable and Milestones}
+\label{sec:timetable}
+
+\begin{description}
+\item[17th Oct - 6th Nov] Further research into LWT's source. Research Ocaml coding techniques.\\
+Milestone: Ready to begin Planning
+
+\item[7th Nov - 27th Nov]
+Continued research into LWT's source. Plan implementation of basic functionality of the ported library.\\
+Milestone: Ready to begin development
+
+\item[28th Nov - 18th Dec] Begin implementation of basic functionality of library.\\
+Milestone: Basic threads done. Able to run a few small examples using threads.
+
+\item[19th Dec - 8th Jan] Begin implementation of basic concurrency aspects (atomic variables and functions, mutexes, etc).\\
+Milestone: Producer consumer using mutexes/atoms produced (along with perhaps some other basic concurrency demonstrations).
+
+\item[9th Jan - 29th Jan] Core concurrency features implemented.\\
+Milestone: Able to write common small programs which use normal concurrency techniques.
+
+\item[30th Jan - 19th Feb] 
+
+\item[20th Feb - 12th Mar]
+
+\item[13th Mar - 2nd April]
+
+\item[3rd April - 23rd April]
+
+
+
+\end{description}
+
+\section{Resources Required and Backup}
+\label{sec:resources}
+A list of required resources:
+\begin{itemize}
+\item{My own Machines:
+    \begin{itemize}
+    \item{Macbook Air 13" 2013 (8GB RAM, 512GB Storage, OSX/Windows 8)}
+    \item{Desktop Computer (Ubuntu 13.04/Windows 7, Intel Core2 Quad, 5TB Storage)}
+    \end{itemize}
+}
+\item{Machines in College}
+\item{`Roo' Multicore Machine (48-cores)}
+\item{Ocaml-Java and Sources\footnote{Ocaml-Java: http://ocamljava.x9c.fr/}}
+\item{Ocaml\footnote{Ocaml: http://ocaml.org}}
+\item{LWT Sources\footnote{LWT: http://ocsigen.org/lwt/}}
+\end{itemize}
+
+Backups will be provided by Dropbox, Skydrive, my own personal USB stick and my personal storage on the PWF facilities.
+Version control (and also the main copy of my dissertation/project) will be provided by Github.
+\end{document}

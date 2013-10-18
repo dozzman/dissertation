@@ -1,0 +1,40 @@
+Phase 1 Project Selection Status Report
+					
+      Name: Dorian Peake
+      College: St John's College
+      User Identifier: dp448
+      Director of Studies: Malte Schwarzkopf
+					
+Please complete 1, 2 and 3 below.
+
+      1. Please write 100 words on your current project ideas.
+
+Currently the implementation of Ocaml allows concurrent programming; however due to the lack of a parallel garbage collector, a global runtime lock is in place resulting in little potential for multicore processing. Ocaml-Java is a very nice project which solves this problem by compiling Ocaml code to Java bytecode, thus utilizing Java's own garbage collector and parallel processing capabilities - however the Ocaml-Java concurrency library is quite low-level for frequent use. For my project, I plan to port a very popular concurrency library - Ocsigen's Lightweight Threads (LWT) - to go on top of Ocaml-Java's low-level concurrency library. This way software written with LWT may utilize full multicore capabilities when compiled using Ocaml-Java and thus really demonstrate the benefit of multicore support. The benefit being that software written in LWT under Ocaml-Java should be far more scalable than its normal Ocaml counterpart. This can be measured using various parallel benchmarks.
+		
+      2. Please list names of potential project supervisors.
+	  
+Jeremy Yallop ( jdy22 )
+Leo White ( lpw25 )	
+
+      3. Is there any chance that your project will involve any
+         computing resources other than the Computing Service’s MCS
+         and software that is already installed there, for example:
+         your own machine, machines in College, special peripherals,
+         imported software packages, special hardware, network access,
+         substantial extra disc space on the MCS.
+        If so indicate below what, and what it is needed for.
+		
+- My own Machines:
+		Macbook Air 13" 2013 ( 8GB RAM, 512GB Storage, OSX/Windows 8 )
+		Desktop Computer ( Ubuntu 13.04/Windows 7, Intel Core2 Quad, 5TB Storage )
+- Machines in College
+- 'Roo' Multicore Machine ( 48-cores )
+- Ocaml-Java and Sources [1]
+- Ocaml [2]
+- OPAM and related packages [3]
+- LWT Sources [4]
+
+[1] Ocaml-Java: http://ocamljava.x9c.fr/
+[2] Ocaml: http://ocaml.org/
+[3] OPAM: http://opam.ocamlpro.com/
+[4] LWT: http://ocsigen.org/lwt/

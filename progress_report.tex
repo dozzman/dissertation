@@ -1,0 +1,24 @@
+% preamble
+\documentclass[a4paper]{article}
+
+% body
+\begin{document}
+
+\input{./progress_report_title.tex}
+
+\section{Introduction}
+Talk about what this document is, what it contains, its structure, quick reminder of the project, what it is, what it means, etc. summarise my feelings of the projects progress and projection.
+
+This document aims to provide information on the progress of my project which includes: the current state of the project and what has been achieved up to this point; what is still needed to be done and what (if any) externalities and unknown variables have been discovered and their effect on my progress. My project, as a quick overview, is to get parallel OCaml code running on the JVM with the use of OCaml-Java and LWT. As a summary of the below, I feel as though the project is moving along well although very slightly behind schedule, with the greatest difficulty being getting to a point where OCaml-Java and LWT are managing to communicate, which has been achieved.
+
+\section{Current State of the Project}
+The project is at a point where LWT and OCaml-Java are compiling and very basic (not very useful) functionality is achievable. This corresponds to one milestone behind my indented progress, however the next milestone is fairly close to completion. I don't believe that an any adoptions are needed to my schedule, however if I believe that less time could be spent on managing benchmarks and more constructing the thread scheduler. Getting OCaml-Java and LWT to compile and interface correctly was a much harder task than I had initially expected since there are lots of intermediate `helper' programs which LWT relies on - mainly for building. Attempting to get these programs to function under OCaml-Java as well would have been an increasingly difficult task and a lot of code tampering -- so instead I manually removed calls to these programs and compiled a script of the new commands to build LWT.
+
+\section{What's Left}
+The scheduler still needs to be written which will -- at the early stages -- provide an disproportionate boost to functionality and should be relatively straight forward to extend to complete the parallel aspect of the project. Benchmarking and testing still also needs to be done.
+
+\section{Plan from here}
+Currently my focus is within Java, writing the scheduler and attempting to link it to LWT's code. LWT is written in such a way as to make this a more straightforward task than attempting to get OCaml-Java and LWT to interface, therefore I feel as though the missed milestone may simply be a case of miss allocation of time to parts of the project I hadn't realised would require more/less time.
+
+\end{document}
+

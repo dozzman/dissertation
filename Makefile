@@ -4,8 +4,8 @@
 #TEX_OPTIONS= -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make
 TEX_OPTIONS= -interaction=nonstopmode
 BIBTEX_OPTIONS=
-TEX_RES=proposal_title.tex
-PDFS=proposal.pdf #main.pdf
+TEX_RES=progress_report_title.tex #proposal_title.tex
+PDFS=progress_report.pdf #proposal.pdf #main.pdf
 BIB_RES=resources.bib
 
 # main latex compiler

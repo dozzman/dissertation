@@ -5,7 +5,9 @@
 TEX_OPTIONS= -interaction=nonstopmode
 BIBTEX_OPTIONS=
 TEX_RES=progress_report_title.tex #proposal_title.tex
-PDFS=progress_report.pdf #proposal.pdf #main.pdf
+#OUTPUT+=progress_report.pdf 
+#OUTPUT+=proposal.pdf 
+OUTPUT+=diss.pdf
 BIB_RES=resources.bib
 
 # main latex compiler
@@ -14,7 +16,7 @@ BIBTEX=bibtex $(BIBTEX_OPTIONS)
 
 .PHONY: all
 
-all: $(PDFS)
+all: $(OUTPUT)
 
 %.pdf: %.tex $(TEX_RES) $(BIB_RES)
 	$(TEX) $<

@@ -7,8 +7,10 @@
 
 \usepackage{a4}
 \usepackage{verbatim}
-
-\input{epsf}                            % to allow postscript inclusions
+\usepackage{todonotes}
+\usepackage{pgf}                        % for my todo notes
+\usepackage{cite}
+%\input{epsf}                            % to allow postscript inclusions
 % On thor and CUS read top of file:
 %     /opt/TeX/lib/texmf/tex/dvips/epsf.sty
 % On CL machines read:
@@ -79,30 +81,16 @@ Supervisor:         & Jeremy Yallop                   \\
 
 \section*{Original Aims of the Project}
 
-{\bf Pinkbook says at most 100 words describing the original aims of the project, e.g. use LWT to create parallelism in OCaml-Java, see how well this scales in comparisson to normal LWT, etc }
-
-To write a demonstration dissertation\footnote{A normal footnote without the
-complication of being in a table.} using \LaTeX\ to save
-student's time when writing their own dissertations. The dissertation
-should illustrate how to use the more common \LaTeX\ constructs. It
-should include pictures and diagrams to show how these can be
-incorporated into the dissertation.  It should contain the entire
-\LaTeX\ source of the dissertation and the Makefile.  It should
-explain how to construct an MSDOS disk of the dissertation in
-Postscript format that can be used by the book shop for printing, and,
-finally, it should have the prescribed layout and format of a diploma
-dissertation.
-
+The aim of this project was to highlight the differences between single and multithreaded OCaml code. This was done by adapting the Lightweight Threading Library (LWT) -- a very popular threading library for OCaml -- to use the OCaml to Java bytecode compiler OCaml-Java, thus allowing software written with LWT to utilise the multithreading capabilities of the JVM. \todo{fill this out a bit more, maybe talk about what differences the project was looking for/found}
 
 \section*{Work Completed}
 {\bf Pinkbook says at most 100 words summarising work completed, e.g. scheduler of LWT to OCaml-Java threads, worker public/private queue structure, benchmarks, etc.}
-All that has been completed appears in this dissertation.
+The LWT threading capabilities have been integrated with OCaml-Java, thus allowing some LWT programs to compile to Java bytecode and run simultaneously on the JVM. This is done using a scheduler algorithm which maps LWT threads to Java threads. \todo{fill this out some more as well when possible}
 
 \section*{Special Difficulties}
 {\bf Pinkbook says at most 100 words describing special difficulties, but most should just say "None" }
-Learning how to incorporate encapulated postscript into a \LaTeX\
-document on both CUS and Thor.
- 
+None, {\em possibly}.
+
 \newpage
 \section*{Declaration}
 
@@ -127,7 +115,7 @@ extent for a comparable purpose.
 
 \newpage
 \section*{Acknowledgements}
-{\bf Pinkbook doesn't say anything about an acknowledgements section..., don't think there should be with that declaration I'm meant to have signed anyway}
+\todo{add thanks at the end}
 This document owes much to an earlier version written by Simon Moore
 .  His help, encouragement and advice was greatly 
 appreciated.
@@ -143,6 +131,19 @@ appreciated.
 \pagestyle{headings}
 
 \chapter{Introduction}
+\section{Motivation}
+\todo{this para is sounds like a history talk which is what thingybob told us not to do}
+% What I want to say:
+% Talk about how things are moving/have moved from uniprocessor to multiprocessor systems and parallelism. Important to write programs that will run well on the hardware of the day (which means writing programs which exploit prarallelism well)
+% Talk about functional programming, what it is, where it came from and why it's good/cool. Examples of C++11 and Java incoroperating functional paradigms, more and more programmers using functional methodologies for program safety and security in the mathematics of how it works.
+% Talk (more) on OCaml, how it is a very good functional programming language, incorperates OOP and imerative when neccessary but doesn't allow parallelism due to core runtime and non-concurrent garbage collector.
+% Enter OCaml-Java, OCaml to java compiler which allows OCaml code to run on the JVM. Also ultimately means that the compiled code can use multiple java threads - now we have truly parallel OCaml code.
+% Although OCaml is singlethreaded at the lowest level, there exist threading libraries to perform asynchronous tasks within OCaml, for example Async (developed by Jane Street \citeme} and LWT, produced by Ocsigen). These libraries provide a great interface for multithreading in OCaml but lack the underlying support from the OCaml language - It would be interesting to find out just what the difficulties/benefits are from executing OCaml asynchrnous code in a multithreaded environment (thus the motivation of the project, can achieve some sort of comparisson using OCaml-Java as our vector into multithreaded OCaml -- Just a matter of getting one of the asynchronous libraries to work with OCaml-Java.
+% How much better is multithreaded OCaml code over singlethreaded code? What are the challenges/benefits of writing multithreaded programs using a functional programming language? How well do threaded/asynchronous OCaml programs translate onto a multithreaded system? It would be interesting to test all these things. (possibly only talk about `I wanted to test the difference between using threaded
+Trends current trends in chip advancement have shown that since around 2003\cite{hennessy2012}, the growth in processor frequency has effectively plateaued and computer architects have had to look for different methods of achieving greater computational power. The diminishing returns of processor frequency have been greatly effected by the amount of energy required to switch a transistor's output -- known as the {\em dynamic energy}. This dynamic energy needs to be dissapated through the side of the chip die at a size of around 1.5cm. Clearly this becomes an increasingly difficult task for processors with greater clock frequencies which create more energy to dissipate. As a result of this and some other unmentioned factors, the focus of achieving greater performance has moved from clock frequency improvements to parallel processing. In fact it is mainly due to the progress made in parallelism since 2003 that have allowed continued increase in processor performance as a result of being able to fit more CPU's onto a die as the transistor sizes have gotten smaller.
+
+
+
 
 \chapter{Preparation}
 
@@ -153,7 +154,7 @@ appreciated.
 \chapter{Conclusions}
 
 \chapter{Bibliography}
-
+\bibliography{resources}
 \chapter{Appendices}
 
 \chapter{Project Proposal}

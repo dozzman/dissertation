@@ -132,7 +132,6 @@ appreciated.
 
 \chapter{Introduction}
 \section{Motivation}
-\todo{this para is sounds like a history talk which is what thingybob told us not to do}
 % What I want to say:
 % Talk about how things are moving/have moved from uniprocessor to multiprocessor systems and parallelism. Important to write programs that will run well on the hardware of the day (which means writing programs which exploit prarallelism well)
 % Talk about functional programming, what it is, where it came from and why it's good/cool. Examples of C++11 and Java incoroperating functional paradigms, more and more programmers using functional methodologies for program safety and security in the mathematics of how it works.
@@ -140,11 +139,11 @@ appreciated.
 % Enter OCaml-Java, OCaml to java compiler which allows OCaml code to run on the JVM. Also ultimately means that the compiled code can use multiple java threads - now we have truly parallel OCaml code.
 % Although OCaml is singlethreaded at the lowest level, there exist threading libraries to perform asynchronous tasks within OCaml, for example Async (developed by Jane Street \citeme} and LWT, produced by Ocsigen). These libraries provide a great interface for multithreading in OCaml but lack the underlying support from the OCaml language - It would be interesting to find out just what the difficulties/benefits are from executing OCaml asynchrnous code in a multithreaded environment (thus the motivation of the project, can achieve some sort of comparisson using OCaml-Java as our vector into multithreaded OCaml -- Just a matter of getting one of the asynchronous libraries to work with OCaml-Java.
 % How much better is multithreaded OCaml code over singlethreaded code? What are the challenges/benefits of writing multithreaded programs using a functional programming language? How well do threaded/asynchronous OCaml programs translate onto a multithreaded system? It would be interesting to test all these things. (possibly only talk about `I wanted to test the difference between using threaded
-Trends current trends in chip advancement have shown that since around 2003\cite{hennessy2012}, the growth in processor frequency has effectively plateaued and computer architects have had to look for different methods of achieving greater computational power. The diminishing returns of processor frequency have been greatly effected by the amount of energy required to switch a transistor's output -- known as the {\em dynamic energy}. This dynamic energy needs to be dissapated through the side of the chip die at a size of around 1.5cm. Clearly this becomes an increasingly difficult task for processors with greater clock frequencies which create more energy to dissipate. As a result of this and some other unmentioned factors, the focus of achieving greater performance has moved from clock frequency improvements to parallel processing. In fact it is mainly due to the progress made in parallelism since 2003 that have allowed continued increase in processor performance as a result of being able to fit more CPU's onto a die as the transistor sizes have gotten smaller.
+\todo{this para is sounds like a history talk which is what thingybob told us not to do}
+Trends current trends in chip advancement have shown that since around 2003\cite{hennessy2012}, the growth in processor frequency has effectively plateaued and computer architects have had to look for different methods of achieving greater computational power. The diminishing returns of processor frequency have been greatly effected by the amount of energy required to switch a transistor's output -- known as the {\em dynamic energy}. This dynamic energy needs to be dissapated through the side of the chip die at a size of around 1.5cm. Clearly this becomes an increasingly difficult task for processors with greater clock frequencies which create more energy to dissipate. As a result of this and some other unmentioned factors, the focus of achieving greater performance has moved from clock frequency improvements to parallel processing. As a result, it is important for software developers to create software that is able to take full advantage of the hardware of today and estimate on how to make it last on the hardware of tomorrow.
 
-
-
-
+\todo{I don't like the jump between these two paragraphs, seems illogical but they're connected later on}
+Functional Programming concepts have been around for
 \chapter{Preparation}
 
 \chapter{Implementation}

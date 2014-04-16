@@ -165,11 +165,27 @@ Functional Programming concepts have been around for
 % Ultimately the core libraries can be made reentrant, however sorting out the garbage collector is a more difficult and involved task.
 % OCaml does provide a threads library but manual states the threads library is implemented by time sharing on single processor {cite ocaml manual}. 
 % Researched into ways of doing concurrent processing in OCaml.
-% in conjunction with the OCaml threads library, there are also other threading libraries with a richer feature set such as LWT, ASync.
+% in conjunction with the OCaml threads library, there are also other threading libraries with a richer feature set, expanding on the OCaml threads library, such as LWT, ASync.
 % ultimately the as to which one was solely based on the fact that LWT is more popular, (as I have never worked with either and wouldn't have time to test both of them out and decide which I would like to work with the most).
-
+% Projects exist (such as those given in OCaml-Java paper) on multicore implementations of ocaml
+% Research into LWT
+% Lwt is an extensive concurrency suite for OCaml which uses lightweight threads that are created and destroyed very quickly.
+% almost all expressions used within LWT results in a thread being created, which returns the answer.
+% clearly Java threads and LWT
+% Research into OCaml-Java
+% Ocaml-Java provides a `Concurrent' module which provides a few core concurrency solutions e.g. locks, condition variables, atomic variables, etc.
+% Also provides a threadign library which allows the creation of Java threads to run bytecode compiled OCaml functions.
+% all accessible via OCaml therefore little/no Java will/was needed to link this with LWT. Need to essentially map the functions which are executed in OCaml threads to java threads.
+% LWT Threads are lightweight and inexpensive to create/destroy, Java threads are expensive to create/destroy therefore won't be good enough to map each LWT thread to each Java thread.
+% Leads to requirements: Maximum java thread lifetime (for efficiency, else parallelism could be drowned out by overheads), and some others...
+% Tools used:
+% The development of this project relies on the OCaml language, LWT and OCaml-Java
+% Used github for backup and version control
+% also stored code on dropbox for backup purposes and ease of access
 
 \chapter{Implementation}
+
+
 
 \chapter{Evaluation}
 

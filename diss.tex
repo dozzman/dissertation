@@ -137,14 +137,17 @@ appreciated.
 % What I want to say:
 % Talk about how things are moving/have moved from uniprocessor to multiprocessor systems and parallelism. Important to write programs that will run well on the hardware of the day (which means writing programs which exploit
 % prarallelism well) and hopefelly will scale easily to hardware of tomorrow.
-% Talk about functional programming, what it is, where it came from and why it's good/cool. Examples of C++11 and Java incoroperating functional paradigms, more and more programmers using functional paradigms for type safety and
-% security in the mathematics of how it works.
-% Talk (more) on OCaml, how it is a very good functional programming language, incorperates OOP and imerative when neccessary but doesn't allow parallelism due to core runtime and non-concurrent garbage collector.
+% Talk about functional programming, what it is, where it came from and why it's good/cool. Examples of C++11 and Java incoroperating functional paradigms, more and more programmers using functional paradigms for type safety(due to
+% static typing) efficiency (due to expressiveness of code, first class functions, etc) and abstraction from the complexity of the hardware. Programs written with ML  cannot crash. Mention map-reduce and maybe some other notable
+% examlles..
+% Security in the mathematics of how it works.
+% Talk (more) on OCaml, how it is a 'very good' functional programming language: based on ML, has all the wonderful things I've mentioned about funcitonal programming implemented in the language, incorperates OOP and imerative when
+% neccessary but doesn't allow parallelism due to core runtime and non-concurrent garbage collector.
 % Enter OCaml-Java, OCaml to java compiler which allows OCaml code to run on the JVM. Also ultimately means that the compiled code can use multiple java threads - now we have truly parallel OCaml code.
 % Although OCaml is singlethreaded at the lowest level, there exist threading libraries to perform asynchronous tasks within OCaml, for example Async (developed by Jane Street \citeme} and LWT, produced by Ocsigen). These libraries
-% provide a great interface for multithreading in OCaml but lack the underlying support from the OCaml language - It would be interesting to find out just what the difficulties/benefits are from executing OCaml asynchrnous code in a
-% multithreaded environment (thus the motivation of the project, can achieve some sort of comparisson using OCaml-Java as our vector into multithreaded OCaml -- Just a matter of getting one of the asynchronous libraries to work with
-% OCaml-Java.
+% provide a great interface for multithreading in OCaml but lack the underlying support from the OCaml language - It would be interesting to find out just what the benefits and drawbacks exist from executing OCaml asynchrnous code in
+% a multithreaded environment (thus the motivation of the project, we can achieve some sort of comparisson between multithreaded and singlethreaded OCaml using OCaml-Java as our vector into multithreaded OCaml code -- Just a matter
+% getting one of the asynchronous libraries to work with OCaml-Java.
 % How much better is multithreaded OCaml code over singlethreaded code? What are the challenges/benefits of writing multithreaded programs using a functional programming language? How well do threaded/asynchronous OCaml programs
 % translate onto a multithreaded system? It would be interesting to test all these things. (possibly only talk about `I wanted to test the difference between using threaded
 \todo{this para is sounds like a history talk which is what thingybob told us not to do}
@@ -157,6 +160,14 @@ take full advantage of the hardware of today and estimate on how to make it last
 \todo{I don't like the jump between these two paragraphs, seems illogical but they're connected later on}
 Functional Programming concepts have been around for
 \chapter{Preparation}
+% Researched into why OCaml cannot fundmentally produce multithreaded code.
+% The OCaml-Java paper has a nice section on the reasons that OCaml is not a multithread capable language: Garbage collector is neither parallel nor concurrent and core libraries are not reentrant.
+% Ultimately the core libraries can be made reentrant, however sorting out the garbage collector is a more difficult and involved task.
+% OCaml does provide a threads library but manual states the threads library is implemented by time sharing on single processor {cite ocaml manual}. 
+% Researched into ways of doing concurrent processing in OCaml.
+% in conjunction with the OCaml threads library, there are also other threading libraries with a richer feature set such as LWT, ASync.
+% ultimately the as to which one was solely based on the fact that LWT is more popular, (as I have never worked with either and wouldn't have time to test both of them out and decide which I would like to work with the most).
+
 
 \chapter{Implementation}
 

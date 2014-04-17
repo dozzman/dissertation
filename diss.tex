@@ -220,7 +220,16 @@ Functional Programming concepts have been around for
 %       Solution to this problem was to associate a lock with each thread so that only one worker thread may be accessing a thread at a time.
 %       When a thread is constructed it is locked initially since it may be incomplete. This is always true for a yield thread since all it does is sleep and re-awaken (which is useless without some waiters hanging on it).
 %       Once some waiters have been bound to this yeild thread, a callback is run to unlock the thread, allowing a worker thread to now pick it up and begin execution on it.
-
+%       LWT uses a lot of unusual OCaml code for instance the %identity function which allows explicit type casting from any two types.
+%           Clearly defeats the point of type safety in OCaml. It is used to destinguish between a thread type `t', wakener type `u' and a thread_repr type.
+%           Thread_repr type may be a chain of thread_repr's with the actual thread type at the bottom of the chain - with pointers to any section of the thread.
+%           This whole thing is considered one thread and so each level of the chain must share the lock. Furthermore the colapsing function `repr' must manage lock movement correctly.
+%   Normal OCaml code uses camlprof to run profiling on OCaml code, however this is not available in OCaml-Java. Meant I needed to write a Profiling module for the benchmarking process.
+%   How profiling works:
+%       Create a timer object and run Timer.start at the beginning of a function and Timer.stop at the end of a function.
+%       Timing results in nanoseconds can be retrieved from Timer.get_nanos, or millis with Timer.get_millis, etc.
+%       Simple and fast so as to get an accurate timing between function invocation and return.
+%       No other advanced functions neccessary to complete profiling successfully
 % laced lwt with locks
 % created a small worker thread function which pops off threads from the queue and executes them
 % problems occurred because LWT was written in such a way which allthough concurrent, assumes single threaded (and rightfully so, I mean it is OCaml of course)
@@ -229,6 +238,11 @@ Functional Programming concepts have been around for
 
 \chapter{Evaluation}
 % Talk about what success critera you've met, and why if any have not been met.
+% completed all my success criteria:
+%   Able to show scalability difference between 3 versions of benchmarks
+%       Need to write/find some program which runs under my software and demonstrates the differences
+%   Parallel benchmarks show scalability of LWT running with multithreaded code
+%       Clear from the results of the Mergesort graph
 % talk how testing was achieved: On my mac, 2 cores 4 hw threads, desktop - similar, roo - 48 core machine.
 % implemented fib and merge sort (based on cilk) for parallel benchmarks. Versions written in normal OCaml, LWT and asynchronous LWT to compare the differences between them.
 % Graphed number of threads against each other to show speed up

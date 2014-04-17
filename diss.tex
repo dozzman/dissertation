@@ -184,7 +184,47 @@ Functional Programming concepts have been around for
 % also stored code on dropbox for backup purposes and ease of access
 
 \chapter{Implementation}
-
+% what did I even do/core parts of the implementation of project:
+% benchmarks, including fib, mergesort.
+% makeing LWT functions thread safe (includes attaching locks to threads, ensuring half-baked threads never see the surface)
+% Many implementation problems:
+%   LWT is a large software solution, incredibly complex and very popular.
+%   OCaml-Java is a mature peice of software, never-the-less still has its fair share of bugs.
+%   Initially started to try and get LWT to compile (in its entireity) with OCaml-Java, this involved extracting all the build commands from the makefile (via bash -x dump) and manually editing lines with sed & awk to convert it into
+%   a format that OCaml-Java could understand (using ocamljava binaries, libraries, manually preprocessing code, etc).
+%   OCaml relies heavily on topfind, a software which automatically constructs ocaml compile commands, including all the relevant libraries. Had to remove all the topfind commands and replace them with their generated output,
+%   replacing all libraries with the OCaml-Java counterpart.
+%   LWT uses a lot of syntactic sugar which is constructed with Camlp4, the OCaml preprocessor. Unfortunately this is currently broken in OCaml-Java, but fortuntely since it's just a preprocessor I managed to manually preprocess the
+%   files and replace them inside the code directory (with a little difficulty since Camlp4 reverts to bytecode when the output is redirected to a file, which meant a lot of struggle wondering why the code was being preprocessed to
+%   garbage, furthermore the Camlp4 processing is laced throughout the build commands which meant removing all the p4 switches manually)
+%   Came accross many bugs in the OCaml-Java during this process:
+%       When compiling OCaml code using ocamlc provided by OCaml-Java, the `shebang' isn't included in the bytecode (unlike vanilla OCaml) therefore you cannot execute it with `./', you must execute it with `ocamlrun'. Caused a lot of
+%       pain when trying to figure out why the executeables were not executing.
+%       Camlp4 is broken for OCaml-Java 2.0 version 7 and greater. Returns error 'unable to determine class for symbol Camlp4'
+%   Managed to get a lot compiling with OCaml-Java, replaced all the C/C++ external calls with exceptions so that I could catch what I needed to implement first to get some kind of result.
+%   After getting somewhere close to a compiling LWT, moved onto getting asynchronous I/O working.
+%       The greatest difficulty was determining whether a file descriptor in OCaml is the same as a file descriptor in Java and in Unix. The ultimate answer was yes, however Java gives you no access whatsoever to file descriptors of
+%       any kind. This means passing file descriptors is either not going to work at all or going to work with a lot of hacking around with Java reflection and JNI.
+%   All the problems resulted me having to abandon this section of the project and move onto the parallelism section.
+% describe how LWT works:
+%   Lwt.Poll repeatedly checks whether a thread has completed, this is used with Lwt_main.run to start a thread off and relay it's completion to the thread that spawned it.
+%   As threads are run, more threads are spawned and put onto the end of a thread queue. In single threaded LWT all the threads are executed in FIFO order (drawing time, draw a thread being taken off, spawning more threads onto the
+%   back and then executing the next one on the top of the queue)
+%   My job was to turn this thread queueing idea into a thread-safe implementation:
+%       Started out with creating a worker thread function which will take threads off the thread queue and execute them
+%       Whenever Lwt_main.run is called, the worker threads are spawned and continuously process threads on the thread queue until interrupted
+%       There is a clear race condition from all worker threads accessing the thread queue simultaneously. To prevent bugs from this, the simple method is to apply a global lock to accessing and processing a thread on the thread
+%       queue, keeping parallelism but removing benefits of parallelism (and only introducing overheads).
+%       To move away from the global lock, I introduced a single lock around the thread queue which allowed sequential access to the thread list. The lock is released as soon as a thread is removed from the thread queue.
+%       The way LWT is written means that threads are incomplete when they're placed onto the yield queue, meaning that a thread may begin executing an incomplete thread.
+%       Solution to this problem was to associate a lock with each thread so that only one worker thread may be accessing a thread at a time.
+%       When a thread is constructed it is locked initially since it may be incomplete. This is always true for a yield thread since all it does is sleep and re-awaken (which is useless without some waiters hanging on it).
+%       Once some waiters have been bound to this yeild thread, a callback is run to unlock the thread, allowing a worker thread to now pick it up and begin execution on it.
+%   
+% laced lwt with locks
+% created a small worker thread function which pops off threads from the queue and executes them
+% problems occurred because LWT was written in such a way which allthough concurrent, assumes single threaded (and rightfully so, I mean it is OCaml of course)
+% this means thread creation is done in parts and a `half-baked' thread can be put on the 
 
 
 \chapter{Evaluation}

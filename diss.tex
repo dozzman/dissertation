@@ -153,12 +153,26 @@ appreciated.
 \todo{this para is sounds like a history talk which is what thingybob told us not to do}
 Trends current trends in chip advancement have shown that since around 2003\cite{hennessy2012}, the growth in processor frequency has effectively plateaued and computer architects have had to look for different methods of achieving
 greater computational power. The diminishing returns of processor frequency have been greatly effected by the amount of energy required to switch a transistor's output -- known as the {\em dynamic energy}. This dynamic energy needs to
-be dissapated through the side of the chip die at a size of around 1.5cm. Clearly this becomes an increasingly difficult task for processors with greater clock frequencies which create more energy to dissipate. As a result of this and
-some other unmentioned factors, the focus of achieving greater performance has moved from clock frequency improvements to parallel processing. As a result, it is important for software developers to create software that is able to
-take full advantage of the hardware of today and estimate on how to make it last on the hardware of tomorrow.
+be dissapated through the side of the chip die at a size of around 1.5cm. Clearly this becomes an increasingly difficult task for processors with greater clock frequencies which generate more heat energy to dissipate. As a result of
+this and some other unmentioned factors, the focus of achieving greater performance has moved from clock frequency improvements to parallel processing. Therefore it is important for software developers to create software that is
+able to take full advantage of the hardware of today and estimate ways to make it scale on the hardware of tomorrow.
 
 \todo{I don't like the jump between these two paragraphs, seems illogical but they're connected later on}
-Functional Programming concepts have been around for
+Part of the way Programming languages are advancing is towards Functional Programming. Functional Programming concepts have been around since Turing, Church's and Kleene's independent work in the 1930's\cite{scott2009} and
+fundamentally defines the output of a program as the mathematical funcion of its inputs. This is different from imperative languages in that the functions defined in a (purely) functional language have no state and therefore have no
+side effects. If you were to provide the same inputs to the same function you would always get the same output. Another important aspect of functional languages is the idea of functions being first-class values and higher-order
+functions. First-class value functions are functions that are able to be passed as an argument to another function. The function receiving the first-class function argument is known as a higher-order function (which may also return a
+function as a result). Considering these new weapons for development we have obtained from functional programming languages, the expressiveness of our programs has already become incredibly vast. \todo{Might add map function as
+example of higher-order function}.
+Functions such as map, reduce and fold ere very easily expressed using higher-order functions. Java achieves something similar to a higher-order function when using Java Collections, for example Java.util.TreeSet. This class can be
+constructed by passing an object implementing the Comparator interface. This interface contains only one function `compareTo' which creates an ordering between any two elements of a class. Essentially, java is wrapping a class around
+this compareTo function so that it may be passed similarly to a higher-order function. In C you can also pass functions via a function pointer implememnts some aspects of higher-order functions. However bothe Java and C++ are picking
+up many more functional programming paradigms in the latest versions of their languages: Java 8 and C++11\cite{web:javalambda}\cite{web:autokeyword}. Functional programming paradigms are more efficient, with examples such as
+higher-order functions, and safer; many functional languages are almost entirely statically typed which means \todo{no runtime errors, but I'm not sure if thats entirely due to static typing}no runtime errors due to type conflicts and
+faster code (since types do not need to be checked at runtime). The functional programming language ML has become increasingly popular in research institutes and is a great example of a good functional programming
+language. As an example of saftey in functional programming, compiled ML code cannot crash\cite{paulson1996}.
+
+
 \chapter{Preparation}
 % Researched into why OCaml cannot fundmentally produce multithreaded code.
 % The OCaml-Java paper has a nice section on the reasons that OCaml is not a multithread capable language: Garbage collector is neither parallel nor concurrent and core libraries are not reentrant.
@@ -246,6 +260,7 @@ Functional Programming concepts have been around for
 % talk how testing was achieved: On my mac, 2 cores 4 hw threads, desktop - similar, roo - 48 core machine.
 % implemented fib and merge sort (based on cilk) for parallel benchmarks. Versions written in normal OCaml, LWT and asynchronous LWT to compare the differences between them.
 % Graphed number of threads against each other to show speed up
+% speed up calculations and other theories e.g. ahmdals law, etc.
 % graphed singlethreaded to multithreaded to show scalability
 % fib did particularly bad because all it does is expose the overheads of parallelism (one addition per thread, however theres a ton of thread creation and processing behind each one).
 % mergesort did much better as when it gets down to 1000 values, the threads are running parallel sorts on 1000 values between 48 cores, which is really fast.

@@ -210,7 +210,7 @@ process as a whole in chapter~\ref{chap:evaluation}. My code can also be found i
 % Cant think of any related work off the top of my head... Might delete this little section
 %
 \section{Related Work}
-\label{sec:relatedwork}
+\label{sec:related_work}
 
 
 % \todo{I don't like the jump between these two paragraphs, seems illogical but they're connected later on}
@@ -253,6 +253,38 @@ process as a whole in chapter~\ref{chap:evaluation}. My code can also be found i
 % The development of this project relies on the OCaml language, LWT and OCaml-Java
 % Used github for backup and version control
 % also stored code on dropbox for backup purposes and ease of access
+
+%
+% Outline of what is to come in this chapter
+%
+\section{Investigating Multithreaded OCaml}
+\label{sec:investigating_multithreaded_ocaml}
+%
+% Talk about what makes it impossible to run parallel OCaml code and why OCaml-Java can
+%
+In order to outline the best implementation plan for the LWT--OCaml-Java interface, it was neccessary to understand the limitations that OCaml possessed in compiling parallel code. The OCaml-Java paper from the 2012 `Trends in
+Functional Programming' collection\cite{clerc2012} gives rise to the reason -- stating that the Core OCaml library is not reentant and the OCaml garbage collector is neither parallel nor concurrent. Making the Core library reentrant
+is a relatively straight forward change to the system, however making the garbage collector parallel is not as simple. Ultimately there are many ways to perform concurrent and parallel garbage collection, however this has proven to be
+`too complex' for the current state of the OCaml system\todo{cite this, definitely saw this somewhere}. Java's G1 is fully parallel/todo{cite me} and allows multithreaded support of Java applications, therefore by compiling OCaml code
+do java bytecode, the language may utilise Java's parallelism capabilities.
+\\
+\\
+%
+% Talk about ways of doing concurrent processing in OCaml
+%
+It was neccessary to decide which of the popular concurrency libraries available to OCaml I should use for the purposes of this project therefore I researched into OCaml's ability to produce concurrent OCaml code. Despite OCaml's
+inability to perform parallel code, OCaml provides a threads library for running concurrent OCaml code. The OCaml manual\cite{leroy2013} describes the OCaml threads as being concurrently on a single processor using
+time sharing. However there exist other concurrency libraries which boast a richer feature set than the one provided by OCaml as default. Examples of these languages are Async -- developed by Jane Street Capital\todo{cite me} -- and LWT
+(Lightweight threads library) -- developed by Ocsigen\todo{cite me also}. These are the two main concurrency packages used within OCaml development, choosing one to use within my project was simply a matter of popularity, my reasoning is that they are
+both extremely good packages and would serve well to demonstrate the capabilities of multithreaded OCaml-Java.
+\\
+\\
+%
+% Research into LWT, how it works and how it should work in relation to OCaml-Java (i.e. scheduling LWT threads since they're teenie weenie)
+%
+\section{Investigating LWT}
+\label{sec:investigating_lwt}
+LWT is an extensive concurrency suite for OCaml which is based around the idea of lightweight cooperative threads\cite{dimino2012}. The threads
 
 \chapter{Implementation}
 \label{chap:implementation}

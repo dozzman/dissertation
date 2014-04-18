@@ -133,7 +133,9 @@ appreciated.
 \pagestyle{headings}
 
 \chapter{Introduction}
+\label{chap:Introduction}
 \section{Motivation}
+\label{sec:motivation}
 % What I want to say:
 % Talk about how things are moving/have moved from uniprocessor to multiprocessor systems and parallelism. Important to write programs that will run well on the hardware of the day (which means writing programs which exploit
 % prarallelism well) and hopefelly will scale easily to hardware of tomorrow.
@@ -150,30 +152,85 @@ appreciated.
 % getting one of the asynchronous libraries to work with OCaml-Java.
 % How much better is multithreaded OCaml code over singlethreaded code? What are the challenges/benefits of writing multithreaded programs using a functional programming language? How well do threaded/asynchronous OCaml programs
 % translate onto a multithreaded system? It would be interesting to test all these things. (possibly only talk about `I wanted to test the difference between using threaded
+%
+%
+% Talk about why multithreading is important
+%
 \todo{this para is sounds like a history talk which is what thingybob told us not to do}
 Trends current trends in chip advancement have shown that since around 2003\cite{hennessy2012}, the growth in processor frequency has effectively plateaued and computer architects have had to look for different methods of achieving
 greater computational power. The diminishing returns of processor frequency have been greatly effected by the amount of energy required to switch a transistor's output -- known as the {\em dynamic energy}. This dynamic energy needs to
 be dissapated through the side of the chip die at a size of around 1.5cm. Clearly this becomes an increasingly difficult task for processors with greater clock frequencies which generate more heat energy to dissipate. As a result of
 this and some other unmentioned factors, the focus of achieving greater performance has moved from clock frequency improvements to parallel processing. Therefore it is important for software developers to create software that is
 able to take full advantage of the hardware of today and estimate ways to make it scale on the hardware of tomorrow.
+\\
+\\
+%
+% Talk about why functional programming is important
+%
+Functional Programming concepts have been around since Turing and Church's work in the 1930's\cite{scott2009} but have become more popular in recent times. The expressiveness that functional programming paradigms give the programmer
+has finally caught on in mainstream development and as such languages such as C++ and Java are incorperating notable functional programming techniques such as type inference\cite{web:autokeyword} and first-class anonymous functions
+(lambas)\cite{web:javalambda}. Notable functional languages include Haskell and ML which have inspired more widely used functional languages such as OCaml\cite{madhavapeddy2013}. OCaml is a very extensive functional language which
+also includes an elegant object system, thus incorperating the best of both functional and imperative programming techniques and making it a very powerful language to develop with. Unfortunately OCaml in it's current vanilla state is
+unable to compile parallel code, which is becoming an ever more neccessary approach to development as systems become more and more parallel.
+\\
+\\
+%
+% Talk about how java has multithreading but no functional, whereas OCaml is functional with no multithreading
+%
+Java on the other hand is a very good imperative programming language/system. It compiles to bytecode which runs on it's virtual machine which is implemented in everything from ATM's and credit card Chips\todo{cite where it says ATM's
+and credit card chips use Java} to home desktops and servers -- leading to one of the slogan's \todo{find where this slogan is written} `{\em write once, run everywhere}'. Over the years the JVM has become highly optimised to the
+hardware/systems that it runs on such that there is little diffrence between Java code running on the JVM and natively compiled code. Furthermore, Java supports parallel processing, fully utilising any number of cores/hardware threads
+that the system has to offer.
+\\
+\\
+%
+% Talk about how OCaml-Java merges the two but is in need of a sufficient threading library, many exist (LWT, Async) but are not yet compatible. This is where my project comes in.
+%
+A peice of software called OCaml-Java aims to merge best aspects of both languages together to create a better OCaml programming solution. It achieves this by compiling OCaml code to Java bytecode, thus allowing it to run on any JVM.
+This means two things:
+\begin{itemize}
+\item OCaml can now be written to run on a wide variety of hardware/systems.
+\item OCaml can use Java's multithreading capabilities to run fully parallel OCaml code\cite{clerc2012}
+\end{itemize}
+OCaml-Java comes with a basic collection of concurrency tools which are essentially a small subset of Java's own concurrency library, with wrappers which allows access to them from within OCaml. Clearly the concurrency techniques
+provided by Java do not nicely translate to the way concurrency is done in a functional programming language like OCaml. There already exist extremely good and highly optimised OCaml concurrency libraries such as Async by Jane Street
+and LWT (Lightweight Threads Library) by Ocsigen, however these will not directly work with OCaml-Java when compiled to Java bytecode. Somehow getting one of these OCaml concurrency libraries working with OCaml-Java would demonstrate
+OCaml-Java's true potential for parallel OCaml code, written in the functional flavour that works best with the OCaml language -- this is the motivation for my project.
+\\
+\\
+%
+% Briefly outline project, and where I this dissertation will take the reader on their journey
+%
+My project aims to interface OCaml-Java and the LWT concurrency library in order to demonstrate OCaml-Java's potential for parallelised OCaml code. The rest of this document outlines the preparation and research I conducted in order
+to plan my approach to this project in chapter~\ref{chap:preparation}; the methods and processes that were used to implement the project in chapter~\ref{chap:implementation} and the result of the project development and the work
+process as a whole in chapter~\ref{chap:evaluation}. My code can also be found in chapter~\ref{chap:appendices}.
+\\
+\\
+%
+% Cant think of any related work off the top of my head... Might delete this little section
+%
+\section{Related Work}
+\label{sec:relatedwork}
 
-\todo{I don't like the jump between these two paragraphs, seems illogical but they're connected later on}
-Part of the way Programming languages are advancing is towards Functional Programming. Functional Programming concepts have been around since Turing, Church's and Kleene's independent work in the 1930's\cite{scott2009} and
-fundamentally defines the output of a program as the mathematical funcion of its inputs. This is different from imperative languages in that the functions defined in a (purely) functional language have no state and therefore have no
-side effects. If you were to provide the same inputs to the same function you would always get the same output. Another important aspect of functional languages is the idea of functions being first-class values and higher-order
-functions. First-class value functions are functions that are able to be passed as an argument to another function. The function receiving the first-class function argument is known as a higher-order function (which may also return a
-function as a result). Considering these new weapons for development we have obtained from functional programming languages, the expressiveness of our programs has already become incredibly vast. \todo{Might add map function as
-example of higher-order function}.
-Functions such as map, reduce and fold ere very easily expressed using higher-order functions. Java achieves something similar to a higher-order function when using Java Collections, for example Java.util.TreeSet. This class can be
-constructed by passing an object implementing the Comparator interface. This interface contains only one function `compareTo' which creates an ordering between any two elements of a class. Essentially, java is wrapping a class around
-this compareTo function so that it may be passed similarly to a higher-order function. In C you can also pass functions via a function pointer implememnts some aspects of higher-order functions. However bothe Java and C++ are picking
-up many more functional programming paradigms in the latest versions of their languages: Java 8 and C++11\cite{web:javalambda}\cite{web:autokeyword}. Functional programming paradigms are more efficient, with examples such as
-higher-order functions, and safer; many functional languages are almost entirely statically typed which means \todo{no runtime errors, but I'm not sure if thats entirely due to static typing}no runtime errors due to type conflicts and
-faster code (since types do not need to be checked at runtime). The functional programming language ML has become increasingly popular in research institutes and is a great example of a good functional programming
-language. As an example of saftey in functional programming, compiled ML code cannot crash\cite{paulson1996}.
+
+% \todo{I don't like the jump between these two paragraphs, seems illogical but they're connected later on}
+% Part of the way Programming languages are advancing is towards Functional Programming. Functional Programming concepts have been around since Turing, Church's and Kleene's independent work in the 1930's\cite{scott2009} and
+% fundamentally defines the output of a program as the mathematical funcion of its inputs. This is different from imperative languages in that the functions defined in a (purely) functional language have no state and therefore have no
+% side effects. If you were to provide the same inputs to the same function you would always get the same output. Another important aspect of functional languages is the idea of functions being first-class values and higher-order
+% functions. First-class value functions are functions that are able to be passed as an argument to another function. The function receiving the first-class function argument is known as a higher-order function (which may also return a
+% function as a result). Considering these new weapons for development we have obtained from functional programming languages, the expressiveness of our programs has already become incredibly vast. \todo{Might add map function as
+% example of higher-order function}.
+% Functions such as map, reduce and fold ere very easily expressed using higher-order functions. Java achieves something similar to a higher-order function when using Java Collections, for example Java.util.TreeSet. This class can be
+% constructed by passing an object implementing the Comparator interface. This interface contains only one function `compareTo' which creates an ordering between any two elements of a class. Essentially, java is wrapping a class around
+% this compareTo function so that it may be passed similarly to a higher-order function. In C you can also pass functions via a function pointer implememnts some aspects of higher-order functions. However bothe Java and C++ are picking
+% up many more functional programming paradigms in the latest versions of their languages: Java 8 and C++11\cite{web:javalambda}\cite{web:autokeyword}. Functional programming paradigms are more efficient, with examples such as
+% higher-order functions, and safer; many functional languages are almost entirely statically typed which means \todo{no runtime errors, but I'm not sure if thats entirely due to static typing}no runtime errors due to type conflicts and
+% faster code (since types do not need to be checked at runtime). The functional programming language ML has become increasingly popular in research institutes and is a great example of a good functional programming
+% language. As an example of saftey in functional programming, compiled ML code cannot crash\cite{paulson1996}.
 
 
 \chapter{Preparation}
+\label{chap:preparation}
 % Researched into why OCaml cannot fundmentally produce multithreaded code.
 % The OCaml-Java paper has a nice section on the reasons that OCaml is not a multithread capable language: Garbage collector is neither parallel nor concurrent and core libraries are not reentrant.
 % Ultimately the core libraries can be made reentrant, however sorting out the garbage collector is a more difficult and involved task.
@@ -198,6 +255,7 @@ language. As an example of saftey in functional programming, compiled ML code ca
 % also stored code on dropbox for backup purposes and ease of access
 
 \chapter{Implementation}
+\label{chap:implementation}
 % what did I even do/core parts of the implementation of project:
 % benchmarks, including fib, mergesort.
 % makeing LWT functions thread safe (includes attaching locks to threads, ensuring half-baked threads never see the surface)
@@ -251,6 +309,7 @@ language. As an example of saftey in functional programming, compiled ML code ca
 
 
 \chapter{Evaluation}
+\label{chap:evaluation}
 % Talk about what success critera you've met, and why if any have not been met.
 % completed all my success criteria:
 %   Able to show scalability difference between 3 versions of benchmarks
@@ -267,14 +326,20 @@ language. As an example of saftey in functional programming, compiled ML code ca
 % NEED TO EXPAND ON EVALUATION MORE, THERES LOADS OF GRAPHS I CAN MAKE
 
 \chapter{Conclusions}
+\label{chap:conclusions}
 % Talk about what I wanted to do with the private public threads, how that would've overcome the `half-baked' threads problem and allowed me to construct a workstealer. The contention on the single thread queue could've been
 % aleviated.
 % talk about how I took on a massive project but should've broken it down to make it easier on myself.
 
 \chapter{Bibliography}
+\label{chap:bibliography}
 \bibliography{resources}
+
 \chapter{Appendices}
+\label{chap:appendices}
 
 \chapter{Project Proposal}
+\label{chap:proposal}
 \input{probody}
+
 \end{document}

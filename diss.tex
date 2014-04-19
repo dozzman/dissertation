@@ -242,7 +242,11 @@ process as a whole in chapter~\ref{chap:evaluation}. My code can also be found i
 % Research into LWT
 % Lwt is an extensive concurrency suite for OCaml which uses lightweight threads that are created and destroyed very quickly.
 % almost all expressions used within LWT results in a thread being created, which returns the answer.
-% clearly Java threads and LWT
+% clearly Java threads and LWT threads are not directly compatible (theres a lot of overhead from creating a Java thread compared to an LWT thread), need some sort of scheduler from LWT threads to Java threads
+% describe how LWT works:
+%   Lwt.Poll repeatedly checks whether a thread has completed, this is used with Lwt_main.run to start a thread off and relay it's completion to the thread that spawned it.
+%   As threads are run, more threads are spawned and put onto the end of a thread queue. In single threaded LWT all the threads are executed in FIFO order (drawing time, draw a thread being taken off, spawning more threads onto the
+%   back and then executing the next one on the top of the queue)
 % Research into OCaml-Java
 % Ocaml-Java provides a `Concurrent' module which provides a few core concurrency solutions e.g. locks, condition variables, atomic variables, etc.
 % Also provides a threadign library which allows the creation of Java threads to run bytecode compiled OCaml functions.
@@ -279,12 +283,28 @@ time sharing. However there exist other concurrency libraries which boast a rich
 both extremely good packages and would serve well to demonstrate the capabilities of multithreaded OCaml-Java.
 \\
 \\
+\section{Investigating LWT}
+\label{sec:investigating_lwt}
 %
 % Research into LWT, how it works and how it should work in relation to OCaml-Java (i.e. scheduling LWT threads since they're teenie weenie)
 %
-\section{Investigating LWT}
-\label{sec:investigating_lwt}
-LWT is an extensive concurrency suite for OCaml which is based around the idea of lightweight cooperative threads\cite{dimino2012}. The threads
+LWT is an extensive concurrency suite for OCaml which is based around the idea of lightweight cooperative threads\cite{dimino2012}. Creating and destroying a thread in LWT are very cheap operations such that the system will create a
+thread for every system call that is executed. This idea of lightweight threads with a small lifetime handles itself well to the way OCaml (and languages within the ML family) work which is allocating new data frequently which have a
+small lifetime. The OCaml garbage collector is also optimised for this by using generational garbage collection techniques to more frequently collect younger data, as data that has survived a garbage collection once or more before is
+likely to have an extended lifetime.\cite{chailloux2000}
+
+On the other hand, Java threads have a greater creation overhead and as such cannot be used in a similar fashion to the way LWT threads work without detrimental effects to performance. Java's java.util.concurrent implementations avoid
+the creation overheads by utilising thread pools\cite{web:threadpools}. This observation lead me to the implementation decision of creating a thread scheduler which maps LWT threads to Java threads as clearly a 1:1 mapping would
+simply expose great amounts of thread creation overhead, possibly crippling any speedup gains would obtain.
+\\
+\\
+%
+% Give some examples of LWT code, how it works, how threads are spawned, joined and bound, the thread queue and how it makes things asynchronous
+%
+
+\section{Investigating OCaml-Java}
+\label{sec:investigating_ocaml-java}
+
 
 \chapter{Implementation}
 \label{chap:implementation}
@@ -310,10 +330,7 @@ LWT is an extensive concurrency suite for OCaml which is based around the idea o
 %       The greatest difficulty was determining whether a file descriptor in OCaml is the same as a file descriptor in Java and in Unix. The ultimate answer was yes, however Java gives you no access whatsoever to file descriptors of
 %       any kind. This means passing file descriptors is either not going to work at all or going to work with a lot of hacking around with Java reflection and JNI.
 %   All the problems resulted me having to abandon this section of the project and move onto the parallelism section.
-% describe how LWT works:
-%   Lwt.Poll repeatedly checks whether a thread has completed, this is used with Lwt_main.run to start a thread off and relay it's completion to the thread that spawned it.
-%   As threads are run, more threads are spawned and put onto the end of a thread queue. In single threaded LWT all the threads are executed in FIFO order (drawing time, draw a thread being taken off, spawning more threads onto the
-%   back and then executing the next one on the top of the queue)
+%   refer to thread queuing operation of LWT from preparation section
 %   My job was to turn this thread queueing idea into a thread-safe implementation:
 %       Started out with creating a worker thread function which will take threads off the thread queue and execute them
 %       Whenever Lwt_main.run is called, the worker threads are spawned and continuously process threads on the thread queue until interrupted

@@ -14,7 +14,7 @@
 
 % set default language to OCaml
 \lstset{language=[Objective]Caml,
-        basicstyle=\footnotesize,
+        basicstyle=\scriptsize,
         keywordstyle=\color{blue}
 }
 
@@ -311,12 +311,10 @@ simply expose great amounts of thread creation overhead, possibly crippling any 
 %
 There are many functions within LWT to create threads which have various different effects. One of the most commonly used is the {\em bind} function, with the following type:
 \\
-\\
 \begin{lstlisting}[frame=single]
 val bind : 'a t -> ('a -> 'b t) -> 'b t
 \end{lstlisting}
-\\
-\\
+\hfill\\
 Essentially the bind function takes a thread of generic type, a function which takes the return value of the thread, performs some processing returns a new thread. This processing connects the passed thread and function such that when
 the thread has finished executing, the function will be run with the return value from the thread. This acts synonymously to the classic `sync' operation within various writings on parallel processing\cite{cormen2009}. The new thread
 returned by the bind function is the result of the whole bind operation -- that is, once the passed thread has executed and the passed function has returned some value.
@@ -324,12 +322,10 @@ returned by the bind function is the result of the whole bind operation -- that 
 Since threds in LWT are cooperative, theres no real notion of spawning, starting or stoping such as in POSIX or Java. Asynchronous execution is achieved by binding some work to a thread which will execute later on. This can be
 achieved with the `Lwt\_main.yeild' function:
 \\
-\\
 \begin{lstlisting}[frame=single]
 val yield : unit -> unit Lwt.t
 \end{lstlisting}
-\\
-\\
+\hfill\\
 The {\em yield} function returns a thread which simply goes to sleep, then wakes up as soon as possible and terminates. This is entirely useless on it's own but binding to this thread will create a situation where you're able to
 schedule something to run in the near future -- without knowing when it will occur.
 \\
@@ -346,17 +342,47 @@ OCaml-Java's ability to run OCaml code in parallel using Java threads.
 %
 % Talk about how the concurrency module works, examples of code (maybe, or just prose), how it works (wrapper around java libraries)
 %
-OCaml-Java provides a concurrency library 
+OCaml-Java provides a concurrency module which contains many standard concurrency features such as Locks, atomic variables and condition variables. The locks, for example, can be manipulated as simply as calling `make\_reentrant' to
+construct a new lock and `lock' and `unlock' to change acquire/release the lock respectively:
+\\
+\begin{lstlisting}[frame=single]
+val make_reentrant : bool -> t
+
+val lock : t -> unit
+
+val unlock : t -> unit
+\end{lstlisting}
+\hfill\\
+Essentially, the concurrency module is just a set of OCaml wrappers around their Java counterparts\cite{web:clerc2013} therefore the OCaml-Java reentrant lock module `Concurrent.Lock' is a wrapper around the Java reentrant lock class
+`java.util.concurrent.locks.ReentrantLock'.
+\\
+\\
 %
 % Talk about how OCaml provides neat interface between OCaml and Java with the weird type system (java'lang'system type) etc...
 %
+For classes that do not yet have an OCaml wrapper, there is a neat interface which allows direct calls to Java functions and manipulation of Java references, for example object instantiation. Via the Java.make and Java.call functions,
+you are able to instantiate any Java class or call any Java function:
+\\
+\begin{lstlisting}[frame=single]
+let obj = Java.make "java.lang.Object()"
+let itg = Java.make "java.lang.Integer(int)" 123l
 
-
-
-
+let obj_hash = Java.call "java.lang.Object.hashCode():int" obj
+let eq = Java.call "java.lang.Object.equals(java.lang.Object):boolean" obj itg
+\end{lstlisting}
+\hfill\\
+The code above gives an example of using the Java.make and Java.call functions. Two Java objects are created named `obj' and `itg' using different classes via the Java.make function, then their hash values are compared to each other
+using the Java.call on the hashCode method and the equals method. Whilst the java primitives are easily mapped to OCaml types e.g. a Java int maps directly to an OCaml int32, the types of Java objects need to have their own defining
+types within OCaml. The typing scheme introduced makes a java Object map to an OCaml type `'a java\_instance' where `'a' is a Java class. Classes are denoted within OCaml by substituting dots with quotes to abide by the OCaml
+syntactic rules\cite{web:clerc2013}, therefore the equivalent OCaml type for `java.lang.Object' would be `java'lang'Object java\_instance'.
+\\
+\\
+\section{Requirements Analysis}
+\label{sec:requirements_analysis}
 %
 % Requirements analysis, what this project has told me about what I need to do/achieve, etc.
 %
+As a collective
 
 %
 % Choice of tools, in this case it is Vim, decided against using Object system of OCaml since LWT doesn't use it at all anyway (stuck to modular for consistency)

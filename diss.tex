@@ -269,6 +269,11 @@ process as a whole in chapter~\ref{chap:evaluation}. My code can also be found i
 %
 % Outline of what is to come in this chapter
 %
+The following chapter outlines the processes taken in preparation for the project's implementation. I begin with a look into OCaml's multithreaded capabilities, including the limitations on developing parallel code and why these
+limitations exist. I also discuss LWT's own asynchronous library in comparisson to Java's and the difficulties that may occur when attempting to interface the two. OCaml-Java is overviewed, including what tools become available with
+it's use and how it manages to provide the user with concurrency when writing parallel OCaml code. Finally the research is concluded with a set of requirements which I believe are representative of what the project should hope to
+achieve and the tools/software I will be using throught it's development.
+
 \section{Investigating Multithreaded OCaml}
 \label{sec:investigating_multithreaded_ocaml}
 %
@@ -277,15 +282,15 @@ process as a whole in chapter~\ref{chap:evaluation}. My code can also be found i
 In order to outline the best implementation plan for the LWT--OCaml-Java interface, it was neccessary to understand the limitations that OCaml possessed in compiling parallel code. The OCaml-Java paper from the 2012 `Trends in
 Functional Programming' collection\cite{clerc2012} gives rise to the reason -- stating that the Core OCaml library is not reentant and the OCaml garbage collector is neither parallel nor concurrent. Making the Core library reentrant
 is a relatively straight forward change to the system, however making the garbage collector parallel is not as simple. Ultimately there are many ways to perform concurrent and parallel garbage collection, however this has proven to be
-`too complex' for the current state of the OCaml system\todo{cite this, definitely saw this somewhere}. Java's G1 is fully parallel/todo{cite me} and allows multithreaded support of Java applications, therefore by compiling OCaml code
+`too complex' for the current state of the OCaml system\todo{cite this, definitely saw this somewhere}. Java's G1 is fully parallel\todo{cite me} and allows multithreaded support of Java applications, therefore by compiling OCaml code
 do java bytecode, the language may utilise Java's parallelism capabilities.
 \\
 \\
 %
 % Talk about ways of doing concurrent processing in OCaml
 %
-It was neccessary to decide which of the popular concurrency libraries available to OCaml I should use for the purposes of this project therefore I researched into OCaml's ability to produce concurrent OCaml code. Despite OCaml's
-inability to perform parallel code, OCaml provides a threads library for running concurrent OCaml code. The OCaml manual\cite{leroy2013} describes the OCaml threads as being concurrently on a single processor using
+It was neccessary to decide which of the popular concurrency libraries available to OCaml I should use for the purposes of this project therefore I researched into OCaml's ability to produce concurrent OCaml code, which lead me to
+OCaml's own inbuilt threads libarary. The OCaml manual\cite{leroy2013} describes the OCaml threads as being concurrently on a single processor using
 time sharing. However there exist other concurrency libraries which boast a richer feature set than the one provided by OCaml as default. Examples of these languages are Async -- developed by Jane Street Capital\todo{cite me} -- and LWT
 (Lightweight threads library) -- developed by Ocsigen\todo{cite me also}. These are the two main concurrency packages used within OCaml development, choosing one to use within my project was simply a matter of popularity, my reasoning
 is that they are both extremely good packages and would serve well to demonstrate the capabilities of multithreaded OCaml-Java.
@@ -413,8 +418,6 @@ development of the project. These invariants aside, the following section outlin
 
 \subsubsection{Software and Systems}
 Unlike Java, OCaml has little in the way of a fully supported IDE. There are addons for IDE's such as Eclipse\footnote{https://www.eclipse.org} which add syntax highlighting and build functions, however most (including my supervisors)
-use a text editor such as Emacs or Vim to develop -- which both come stock with OCaml syntax highlighting. I am already very familiar with Vim, therefore it was a clear choice to use it. I also used Mac OSX as my host operating system
-as I am a mac user, however at since there are little restrictions to what operating oystem OCaml (and in particular Java) can run on therefore I was also able to utilise the Intel Labs PWF machines on occasion which are running Ubuntu
 version something\todo{find pwf facilities version}.
 
 \subsubsection{Version Control}
@@ -432,19 +435,19 @@ In conjunction with Github as my primary backup solution, I also hosted my code 
 frequently.
 
 \section{Summary}
+%
+% Summary (pretty much a mirror of the introduction to the chapter, tell you what I've just told you)
+%
 Within this chapter I have demonstrated the process of planning and investigation taken in order to prepare for the projects implementation. I have investigated the ways that OCaml and LWT are able to perform asynchronous code
 execution, including the cause for OCaml's limitations in fully parallel code compilation and the differences between LWT and Java's handling of threads. Furthermore I have demonstrated a few tools that OCaml-Java has introduced which
 allow parallel OCaml code to be written and run on the JVM. Using this information I constructed a set of requirements that I believe are neccessary for this project to adhere to in order to achieve the success criteria. Finally I
 explained that Vim will be my choice of IDE, running on Mac OSX; Git and Github will be used for version control and in addition the PWF facilities and Dropbox will be used for backup.
-%
-% Summary (pretty much a mirror of the introduction to the chapter, tell you what I've just told you)
-%
 
 \chapter{Implementation}
 \label{chap:implementation}
 % what did I even do/core parts of the implementation of project:
 % benchmarks, including fib, mergesort.
-% makeing LWT functions thread safe (includes attaching locks to threads, ensuring half-baked threads never see the surface)
+% making LWT functions thread safe (includes attaching locks to threads, ensuring half-baked threads never see the surface)
 % Many implementation problems:
 %   LWT is a large software solution, incredibly complex and very popular.
 %   OCaml-Java is a mature peice of software, never-the-less still has its fair share of bugs.
@@ -464,6 +467,7 @@ explained that Vim will be my choice of IDE, running on Mac OSX; Git and Github 
 %       The greatest difficulty was determining whether a file descriptor in OCaml is the same as a file descriptor in Java and in Unix. The ultimate answer was yes, however Java gives you no access whatsoever to file descriptors of
 %       any kind. This means passing file descriptors is either not going to work at all or going to work with a lot of hacking around with Java reflection and JNI.
 %   All the problems resulted me having to abandon this section of the project and move onto the parallelism section.
+
 %   refer to thread queuing operation of LWT from preparation section
 %   My job was to turn this thread queueing idea into a thread-safe implementation:
 %       Started out with creating a worker thread function which will take threads off the thread queue and execute them
@@ -489,6 +493,90 @@ explained that Vim will be my choice of IDE, running on Mac OSX; Git and Github 
 % created a small worker thread function which pops off threads from the queue and executes them
 % problems occurred because LWT was written in such a way which allthough concurrent, assumes single threaded (and rightfully so, I mean it is OCaml of course)
 % this means thread creation is done in parts and a `half-baked' thread can be put on the 
+
+%
+% chapter overview, what will I say in this chapter
+% talk about requirements you gave in preparation chapter
+%
+
+\section{Parallelism Overview}
+%
+% Describe how LWT uses thread queue to produce asynchronous requests  
+%
+
+%
+% Describe how this was translated to run things in parallel with worker threads
+%
+
+\section{Thread Safety}
+%
+% Discuss race condition at taking threads off thread queue, easy fix by adding lock around the queue
+%
+
+%
+% Discuss race condition at `half-baked' threads being taken off the thread queue (lwt_main.yielded puts it straight on the queue with no waiters, thread run empty, waiters added at end of thread run, thread is garbage collected)
+%
+
+%
+% Talk about how this was overcome using bind callback
+%
+
+%
+% 
+%
+\section{Backing out of I/O}
+
+%
+% Describe that attempts were made in Michaelmas/Christmas break on attempting to get entireity of LWT Working
+%
+
+%
+% Attempt to get LWT to compile and add unimplemented LWT methods afterwards. Came accross a lot of problems...
+% A lot of LWT relies on external software which would need to be stripped away or also converted. Tried to get away from build system by dumping all build commands to a build script, then editing manually (using sed, perl)
+% Discuss difficulties with using sed on file containing very subtley different commands.
+%
+
+%
+% Tried to get away from OCamlfind by replacing OCamlfind binaries with a `proxy' binary which takes OCamlfind commands and spits out the OCaml command result.
+%
+
+%
+% LWT relies heavily on Camlp4. Camlp4 is broken in OCaml-Java and it was a while before I realised it wasn't an error on my part causing difficulties. Managed to use original CamlP4 instead.
+%
+
+%
+% Managed to strip away all external C/C++ calls and replace then with exceptions so that I could develop the exceptions out one by one
+%
+
+%
+% Attempting to perform IO between OCaml and Java mean't sharing file descriptors between the representations between the two languages. Unfortunately Java doesn't allow you to tinker with file descriptors at all. Would need to
+% perform reflection of sorts to get it working
+%
+
+%
+% Not much in the way of Documentation for the OCaml-Java -- Java interface, so had to go with a small example provided to my by Xavier Clerc himself.
+%
+
+%
+% Ultimately time was running short so I had to move on to the actual parallelism by stripping down LWT to it's asynchronous core -- minus any I/O.
+%
+
+%
+% Learned a lot about taking on a large project. Shouldn't dive straight in, etc...
+%
+
+\section{Profiling}
+%
+% In order to benchmark the speedup gained from parallel OCaml code, I wrote some benchmarks in three different ways: normal OCaml, singlethreaded LWT, parallel/asynchronous LWT.
+%
+
+%
+% Wrote fibonacci benchmark (give example code, and talk about how it would run in the system)
+%
+
+%
+% Wrote mergesort benchmark (again, example code and how it would run in the system)
+%
 
 
 \chapter{Evaluation}

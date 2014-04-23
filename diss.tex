@@ -418,7 +418,9 @@ development of the project. These invariants aside, the following section outlin
 
 \subsubsection{Software and Systems}
 Unlike Java, OCaml has little in the way of a fully supported IDE. There are addons for IDE's such as Eclipse\footnote{https://www.eclipse.org} which add syntax highlighting and build functions, however most (including my supervisors)
-version something\todo{find pwf facilities version}.
+use a text editor such as Emacs or Vim to develop -- which both come stock with OCaml syntax highlighting. I am already very familiar with Vim, therefore it was a clear choice to use it. I also used Mac OSX as my host operating system
+as I am a mac user, however at since there are little restrictions to what operating oystem OCaml (and in particular Java) can run on therefore I was also able to utilise the Intel Labs PWF machines on occasion which are running
+Ubuntu version something\todo{find pwf facilities version}.
 
 \subsubsection{Version Control}
 For version control I used Git since I'm already familiar with it and it has always provided me with the neccessary tools I need to work effectively. I also used Github to host my code in the cloud for a few reasons:
@@ -500,15 +502,62 @@ explained that Vim will be my choice of IDE, running on Mac OSX; Git and Github 
 %
 
 \section{Parallelism Overview}
+\label{sec:parallelism_overview}
 %
 % Describe how LWT uses thread queue to produce asynchronous requests  
 %
+The structure that LWT follows in order to create an asynchronous framework ultimately determined what the neccessary steps were for me in implementing the LWT -- OCaml-Java interface. LWT achieves asynchronous execution by storing
+yielded threads (mentioned in section~\ref{sec:investigating_lwt}) in an queue which will be referred to as the `yield queue' from this point onwards. The function Lwt\_main.run runs an algorithm which takes an initial thread and
+continuously polls this passed thread for completion (at which point b value has been returned). if the thread has not yet returned a value, the algorithm iterates through the yield queue, executing all the threads contained within it
+until it reaches the top of the queue. The algorithm then re-polls the passed thread for completion again, and cycles through the process of executing threads on the yield queue and polling for completion until a value is returned. 
 
+The functions to be executed by the yield threads will most likely add more threads to the yield queue. These threads are added to the bottom of the queue and are not executed until the next polling iteration. Figure blabla\todo{draw
+a diagram of thread queue being executed} describes the functionality of the yield queue graphically.
 %
 % Describe how this was translated to run things in parallel with worker threads
 %
+My approach to parallelising this model was to mimic the functionality of the Lwt\_main.run function accross many Java threads using OCaml-Java. These OCaml-Java threads are known as `worker threads', which perform the process of taking
+threads off the yield queue and executing them. Listing blablabla\todo{find out how to reference listings} summarises the behaviour of a worker thread. Initially the OCaml thread (that is, the first thread executing the main OCaml
+code) calls Lwt\_main.run with an initial (passed) thread to execute -- just as normal. However the function now spawns multiple worker threads (dependant on the number of physical threads the system has available) which are set to
+continually run LWT threads on the yield queue until interrupted. The OCaml thread begins work on the passed thread which will inevitably spawn other threads to be pushed onto the yield queue. Once the initial thread has finished work
+and is waiting on the spawned threads to complete, the OCaml thread will continuously poll the passed thread for a return value. Once this return value has been received, the OCaml thread sends an interrupt signal to all the other
+worker threads in order to stop processing yield threads and terminate execution.  It is interesting to note that the OCaml thread is governing the other Java threads in a preemptive style whereas (as mentioned in in
+section~\ref{sec:investigating_lwt}), LWT threads are cooperative -- there were no problems working with the two threading ideas together.
 
-\section{Thread Safety}
+%
+% Re-describe how yield threads just sleep then wake up. What they execute is whatever is waiting in their waiter list, where a waiter is given by `this datatype'. 
+%
+As an example, listing blablabla\todo{insert that code i wrote just now in here soon} is code that when run, simply outputs what thread it is running on. It does this 20 times before quitting, leaving a trace of all the threads that
+were executing at that time. The inital passed thread is executed which spawns a yield thread that is placed onto the yield queue, furthermore another function (the waiter function) is bound to the yield thread such that when the
+thread is awoken and terminates, the function that was bound is then called with the return value of the yield thread. This function simply prints out what thread is currently running this particular code and then adds another thread
+to the yield queue, making itself the waiter function. This causes a continuous cycle where threads are added to the yield queue, taken off by some worker thread, and the name of the worker thread is printed out. There is a race
+between the worker threads as to which one picks up the yield thread, therefore the output from running this program is different each time, demonstrating real parallel asynchonous execution.
+
+With the overview of the idea for implementing parallel thread execution in LWT, my approach took two main paths: a naive approach of using a runtime lock and a coarse grained locking approach. I decided upon these two strategies
+because considered the first approach to be a relatively straight forward way of getting a result from the project whilst also giving insight into potential problems. The second approach was partly based on the concurrency options
+that OCaml-Java provided for use: OCaml-Java provides reentrant locks and semaphores amongst the atomic variables within the concurrency module, although I had initally decided to use semaphores with integer values based around the
+number of threads currently on the queue, as long as there is code running, there will be threads on the yield queue because every call in LWT results in a thread. Implementing semaphores would cause more overheads with little
+returns, therefore a simple locking scheme was a more sensible idea in this respect.
+
+\subsection{Naive Runtime Lock Approach}
+\label{subsec:naive_runtime_lock_apprach}
+%
+% Discuss implementation that went into the naive runtime lock approach
+%
+This approach involved having all threads require the `global runtime lock' before attempting to pull anything off the yield queue. The lock is also held all whilst the thread is being processed and is only released when all
+processing has been finished and the worker thread is about to enter its next iteration of work. All other threads are blocked, waiting on the runtime lock. Figure blablabla\todo{draw a picture of the naive runtime lock situation}
+describes this situation graphically. This method, although running in truly in parallel (i.e. many threads performing processing at a time), loses any performance gains from it -- in fact it has introduced the overhead of now
+requiring a lock to be held before every thread is executed.  However this approach has created a foundation for a more efficient method to be implemented.
+
+\subsection{Coarse Grained Locking Approach}
+\label{subsec:coarse_grained_locking_apprach}
+%
+% Discuss implementation that went into the coarse grained locking approach
+%
+Improving over the global runtime lock approach
+
+\subsubsection{Thread Safety}
+\label{subsec:thread_safety}
 %
 % Discuss race condition at taking threads off thread queue, easy fix by adding lock around the queue
 %
@@ -522,10 +571,10 @@ explained that Vim will be my choice of IDE, running on Mac OSX; Git and Github 
 %
 
 %
-% 
+% Special care was taken with the callbacks which could be potentially accessed by many threads simultaneously. Data had to be made atomic, some converted to thread local variables, etc.
 %
 \section{Backing out of I/O}
-
+\label{sec:backing_out_of_io}
 %
 % Describe that attempts were made in Michaelmas/Christmas break on attempting to get entireity of LWT Working
 %
@@ -566,6 +615,7 @@ explained that Vim will be my choice of IDE, running on Mac OSX; Git and Github 
 %
 
 \section{Profiling}
+\label{sec:profiling}
 %
 % In order to benchmark the speedup gained from parallel OCaml code, I wrote some benchmarks in three different ways: normal OCaml, singlethreaded LWT, parallel/asynchronous LWT.
 %
@@ -578,7 +628,15 @@ explained that Vim will be my choice of IDE, running on Mac OSX; Git and Github 
 % Wrote mergesort benchmark (again, example code and how it would run in the system)
 %
 
+%
+% OCaml normally has camlprof to do profiling of OCaml software, clearly not available in OCaml-Java. Could find a Java profiler however there are many extra functions created when compiling to java bytecode so easier to just write a
+% small profiling module
+%
 
+%
+% Module contains a few timing functions which are direct calls to java.lang.system.gettime (or w.e.) with the timing as the difference between the two returned values (to nanosecond scale). Undocumented how great the overheads are
+% for calling java function directly, but they create systematic errors so the speedup scale should remain unchanged (is this correct, i'm sure it is). 
+%
 \chapter{Evaluation}
 \label{chap:evaluation}
 % Talk about what success critera you've met, and why if any have not been met.

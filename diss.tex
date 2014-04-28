@@ -548,31 +548,96 @@ This approach involved having all threads require the `global runtime lock' befo
 processing has been finished and the worker thread is about to enter its next iteration of work. All other threads are blocked, waiting on the runtime lock. Figure blablabla\todo{draw a picture of the naive runtime lock situation}
 describes this situation graphically. This method, although running in truly in parallel (i.e. many threads performing processing at a time), loses any performance gains from it -- in fact it has introduced the overhead of now
 requiring a lock to be held before every thread is executed.  However this approach has created a foundation for a more efficient method to be implemented.
-
+%
+% Maybe a summary of this subsection
+%
 \subsection{Coarse Grained Locking Approach}
 \label{subsec:coarse_grained_locking_apprach}
 %
 % Discuss implementation that went into the coarse grained locking approach
 %
-Improving over the global runtime lock approach
+Sustituting a global runtime lock for a coarse grained locking implementation allows the project to take full advantage\todo{`full' or `more'?} advantage of the parallelism exposed by OCaml-Java. The aim of the coarse grained lock is
+to achieve the following requirements over the global runtime lock:
 
+\begin{enumerate}
+\item The locks should prevent unneccessary blocking of threads.
+\item The locks should allow atomic access to shared and mutable data
+\item The locks should do something more\todo{rule of three, need one more here}
+\end{enumerate}
+%
+% Talk about LWT's mutable state and how this lead to a lock per thread
+%
+Threads in LWT have mutable state, consider a thread state going from `Sleep' with no data to `Return' which lets anything accessing the thread that the thread has finished executing and has returned its value. It is neccessary for
+the old `Sleep' thread state to be removed (and collected by the garbage collector) and the `Return' state to be created so the value can be accessed. Therefore the locking mechanism requires that only one worker thread may be
+accessing a state at a time to ensure atomic access to the mutable state data (so as to conform to requirement~1). Furthermore, since each thread may have only one state, the best decision was to associate a lock with each thread
+which is to be acquired by all functions that access the thread. 
+
+%
+% Talk about solution to thread_refs and lock sharing, including how the repr function collapses the thread_repr's.
+%
+Threads in LWT take a further unusual form of `thread\_repr' which are thread indirection types. They provide mutable references to threads (which OCaml does provide, however this is a wrapper around this functionality) -- but
+ultimately it serves as a method of performing type abstraction to ensure all variations of threads can be thought of as some form of `thread representation/thread\_repr'. An interesting result of this is that there may be many layers
+of redirection within a reference to a thread -- as depicted by figure~something\todo{draw figure of layers of thread\_repr's}. Therefore it is important to ensure the behaviour of a thread lock is consistent and sensible when dealing
+with this layering. In deciding what the best approach for applying the thread locks in this situation, I had two methods to choose between:
+
+\begin{enumerate}
+\item Apply a different lock at each individual level, ensuring all locks are acquired and released at all levels below the current `thread\_repr' level before manipulating the thread data.
+\item Have a lock at the lowest level only and ensure this is shared correctly between all other layers.
+\end{enumerate}
+
+I decided to go with the second option and share the lock between many levels of the thread\_repr chain. This seemed like the cleanest option, adding little overhead to the locking process and moving it to the slightly more infrequent
+thread creation functions.
+
+%
+% Other design decisions made/interesing things implemented? take_first_r? no...
+%
+
+%
+% Summary of the subsection and what it talked about?
+%
 \subsubsection{Thread Safety}
 \label{subsec:thread_safety}
 %
 % Discuss race condition at taking threads off thread queue, easy fix by adding lock around the queue
 %
 
+\paragraph{Half-Baked Thread Problem}
+\label{para:half-baked_thread_problem}
 %
 % Discuss race condition at `half-baked' threads being taken off the thread queue (lwt_main.yielded puts it straight on the queue with no waiters, thread run empty, waiters added at end of thread run, thread is garbage collected)
 %
+Some aspects of how LWT handles threads did not directly map well to a parallel implementation of the library. In some cases this meant that special care was neccessarily taken to handle events in the correct way. One notable example
+of this is a race condition between threads being placed on and taken off the yield queue before being appropriately initialised.
+
+A visual description of the problem is outline in figure~something\todo{draw best representation of this problem as possible} along with the offending code segment in listing~something~else\todo{add bind code somewhere here}. The
+problem occurs when attempting to bind a thread to a yield thread, so that it may be run asynchronously. The yield function adds a thread onto the yield queue instantly without the waiters being added to a waiter list. This means that
+any worker thread is able to remove the yield thread from the queue and run it. At the point the bind has added a waiter function to the waiter list, the yield thread has finished executing and will therefore never run the waiters now
+attached. Finally the garbage collector picks up the yield thread which has finished and it is never to be seen again. 
 
 %
 % Talk about how this was overcome using bind callback
 %
+Although the gap between where this race condition occurs within the code is relatively small, the problem occurs suprisingly frequently. To overcome this issue, it was neccessary to lock the yield thread between the point of creation
+and the end of the bind. However this fix makes an assumption on how the yield thread is used -- it suggests that a yield thread will only ever be used in conjunction with a call to bind. While this isn't strictly true, since a yield
+thread is a fully qualified thread on its own that simply does nothing, justification to this assumption is that -- to my understanding -- it is only ever sensibly used in conjunction with bind. To create a yield thread which sleeps
+and wakes with no functions to run upon termination is -- useless. Furthermore the only way to achieve some kind of useful processing with a yeild thread is to attach a waiter function which will run when the thread terminates.
+
+To lock and unlock the yield thread separated accross two functions, I used an additional thread value containing an option for a bind callback. A thread using bind which requires post bind processing can fill this option value with
+a function that performs the appropriate post-processing. Bind, upon completing its binding operation, will then execute the callback if it exists, finishing off the thread processing appropriately. Using this new bind callback, the
+call to yield first locks the yield thread before creation and adds a bind callback function which unlocks the thread. In this state, no worker threads will remove a thread on the yield queue which is currently locked (a requirement
+for removing a thread from the yield queue is that the worker thread is able to acquire the thread lock). Once the bind operation has completed on the yield thread, the callback is run which unlocks the thread, allowing it to be
+picked up by a worker thread to begin execution. A visual description of this change is outlined in figure~something\todo{draw new diagram of locked thread being bound and then unlocked later on, possibly (seems hard to draw).}
 
 %
 % Special care was taken with the callbacks which could be potentially accessed by many threads simultaneously. Data had to be made atomic, some converted to thread local variables, etc.
 %
+\paragraph{ACID Callbacks}
+Callbacks in parallel processing can be called by any and all threads that have access to the code and shared data at any time, therefore it was also important to the rewrite the LWT callbacks such that each thread accessing the callback does
+so in isolation to any other concurrent thread, the shared data is accessed atomically, the shared data remains in a consistent state and the shared data changes remain -- which are the so-called ACID properties of database
+transactions. For two out of for of the ACID properties (consistency and durability) LWT's code already manages well, however atomicity and isolation issues needed to be dealt with. This mainly consisted of converting shared data to
+their atomic type equivalent, and ensuring data dependencies were kept serialised.
+
+
 \section{Backing out of I/O}
 \label{sec:backing_out_of_io}
 %

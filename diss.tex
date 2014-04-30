@@ -632,10 +632,10 @@ picked up by a worker thread to begin execution. A visual description of this ch
 % Special care was taken with the callbacks which could be potentially accessed by many threads simultaneously. Data had to be made atomic, some converted to thread local variables, etc.
 %
 \paragraph{ACID Callbacks}
-Callbacks in parallel processing can be called by any and all threads that have access to the code and shared data at any time, therefore it was also important to the rewrite the LWT callbacks such that each thread accessing the callback does
-so in isolation to any other concurrent thread, the shared data is accessed atomically, the shared data remains in a consistent state and the shared data changes remain -- which are the so-called ACID properties of database
-transactions. For two out of for of the ACID properties (consistency and durability) LWT's code already manages well, however atomicity and isolation issues needed to be dealt with. This mainly consisted of converting shared data to
-their atomic type equivalent, and ensuring data dependencies were kept serialised.
+Callbacks in parallel processing can be called by any and all threads that have access to the code and shared data at any time, therefore it was also important to the rewrite the LWT callbacks such that each thread accessing the
+callback does so in isolation to any other concurrent thread, the shared data is accessed atomically, the shared data remains in a consistent state and the shared data changes remain -- which are the so-called ACID properties of
+database transactions. For two out of for of the ACID properties (consistency and durability) LWT's code already manages well, however atomicity and isolation issues needed to be dealt with. This mainly consisted of converting shared
+data to their atomic type equivalent, and ensuring data dependencies were kept serialised.
 
 
 \section{Backing out of I/O}
@@ -682,8 +682,32 @@ their atomic type equivalent, and ensuring data dependencies were kept serialise
 \section{Profiling}
 \label{sec:profiling}
 %
+% Section outline, what this section is about, bla bla bla
+%
+
+%
+% OCaml normally has camlprof to do profiling of OCaml software, clearly not available in OCaml-Java. Could find a Java profiler however there are many extra functions created when compiling to java bytecode so easier to just write a
+% small profiling module
+%
+Assembling an appropariate profiling suite to test the newly implemented functionality of OCaml-Java and LWT was an equally important step as implementation. Vanilla OCaml allows a special flag for compiling native code with gprof
+profiling compatibility \cite{leroy2013}, however this is clearly unavailable since we are compiling to java bytecode using OCaml-Java. There is no one single Java profiler tool such as gprof, however there are many open source
+alternatives. These are highly configurable and complex software suites which allow a lot of configuration -- most of which I wouldn't need. For the purpose of profiling this project, I would simply need an accurate timer to determine
+the time taken to complete a function so that these times may be compared and the values used in speed up calculations in chapter~\ref{chap:evaluation}. Therefore I wrote a very simple timer module in OCaml using Java's
+high-resolution time source via java.lang.System.nanoTime, in fact within the Java documentation, example code shows the use of nanoTime in determining how long a code segment took to run. Listing~something\todo{add listing for .mli
+of timer module} shows some of the commands used within the simple timer module.
+
+To utilise Java functions and references directly through OCaml, I used the interface describead in section~\ref{sec:investigating_ocaml-java}. There is no documentation on the speed of executing Java functions via the interface in
+comparisson to direct calls, therefore it is possible that the interface will introduce some systematic errors, however they should did not interfere with the results of the project as demonstrated in chapter~\ref{chap:evaluation}.
+%
 % In order to benchmark the speedup gained from parallel OCaml code, I wrote some benchmarks in three different ways: normal OCaml, singlethreaded LWT, parallel/asynchronous LWT.
 %
+Choosing an appropriate benchmark which exploits parallelism well was important to demonstrate the true capabilities of the system. One of my choices for parallel benchmarking was merges sort after investigating the Barcelona OpenMP
+Task Suite -- one of their benchmarks is an integer sort algorithm based on the Cilk sorting algorithm. The Cilk project is a suite for algorithmic multithreaded programming and the Cilk sort performs a mixture of merge sort and
+insertion sort for arrays smaller than a certain threshold. Furthermore the classic Introductions to Algorithms book \cite{coren2009} uses merge sort as an introduction to algorithms that exploit parallelism well.  is a mixture of a
+merge and insertion sort. The mergesort algorithm implemented in OCaml is essentially a mirror of the Cilk algorithm with the exception that the insertion sort in Cilk has been replaced with a simple call to OCaml's default array
+sorting algorithm `Array.sort'.
+
+Another choice of benchmark which was both easy to implement and also featured within the Introduction to Algorithms book was the recursive fibonacci algorithm written adapted for multithreading.
 
 %
 % Wrote fibonacci benchmark (give example code, and talk about how it would run in the system)
@@ -693,10 +717,6 @@ their atomic type equivalent, and ensuring data dependencies were kept serialise
 % Wrote mergesort benchmark (again, example code and how it would run in the system)
 %
 
-%
-% OCaml normally has camlprof to do profiling of OCaml software, clearly not available in OCaml-Java. Could find a Java profiler however there are many extra functions created when compiling to java bytecode so easier to just write a
-% small profiling module
-%
 
 %
 % Module contains a few timing functions which are direct calls to java.lang.system.gettime (or w.e.) with the timing as the difference between the two returned values (to nanosecond scale). Undocumented how great the overheads are

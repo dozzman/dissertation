@@ -4,23 +4,32 @@
 #TEX_OPTIONS= -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make
 TEX_OPTIONS= -interaction=nonstopmode
 BIBTEX_OPTIONS=
-TEX_RES=progress_report_title.tex #proposal_title.tex
-#OUTPUT+=progress_report.pdf 
-#OUTPUT+=proposal.pdf 
-OUTPUT+=diss.pdf
 BIB_RES=resources.bib
 
 # main latex compiler
 TEX=pdflatex $(TEX_OPTIONS)
 BIBTEX=bibtex $(BIBTEX_OPTIONS)
 
-.PHONY: all
+.PHONY: all diss proposal progress_report
 
-all: $(OUTPUT)
+diss: diss.pdf 
 
-%.pdf: %.tex $(TEX_RES) $(BIB_RES)
+all: proposal progress_report diss
+
+proposal: proposal.pdf
+
+progress_report: progress_report.pdf
+
+progress_report.tex: progress_report_title.tex
+
+%.pdf: %.tex $(BIB_RES)
 	$(TEX) $<
 	$(TEX) $<
-	$(BIBTEX) `(echo $< | sed 's/\..*//';)` 
+	if [[ `grep '\\cite' < $<` == 0 ]]; then \
+		$(BIBTEX) `(echo $< | sed 's/\..*//';)`; \
+	fi 
 	$(TEX) $<
 	$(TEX) $<
+
+clean:
+	rm *.log *.bbl *.fls *.pdf *.aux *.blg *.toc *.lof 2>/dev/null; exit 0

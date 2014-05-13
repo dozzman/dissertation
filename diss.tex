@@ -13,6 +13,7 @@
 \usepackage{color}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\pdfpageattr {/Group << /S /Transparency /I true /CS /DeviceRGB>>}
 
 % set default language to OCaml
 \lstset{language=[Objective]Caml,
@@ -650,13 +651,22 @@ thread creation functions.
 Some aspects of how LWT handles threads did not directly map well to a parallel implementation of the library. In some cases this meant that special care was neccessarily taken to handle events in the correct way. One notable example
 of this is a race condition between threads being placed on and taken off the yield queue before being appropriately initialised.
 
-A visual description of the problem is outline in figure~something\todo{draw best representation of this problem as possible} along with the offending code segment in listing~something~else\todo{add bind code somewhere here}. 
+A visual description of the problem is outline in figure~\ref{fig:bind_callback}.
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{bind_callback}
-\caption{insert descriptive caption here}
+\caption{Figure (a) describes the process which causes the LWT thread to be exposed before it has finished procssing. The dotted arrows represent references still held in memory and the solid lines represent movement of data. 1. The
+yield function is called and evaluated to a yield thread. This yield thread is placed straight onto the yield queue. 2. An idle worker thread picks up the yield thread and begins processing it whilst the bind function is processing
+more steps. 3. The worker thread has finished executing the yield thread and therefore it remains somewhere in memory. The yield thread is not collected by the garbage collector yet since there is still a reference to the data from
+within the bind call. Furthermore since the bind function has not completed at this point, the yield thread execution has not performed anything useful and has just infact terminated. 4. The bind has now finished attaching a waiter to
+the yield thread that should execute when the yield thread is awoken, however this step has already occurred, therefore instead the yield thread is collected by the garbage collector and the function never exexutes. This is a classic
+{\em Time of Check to Time of Use (TOCTTOU)} problem. Figure (b) shows the same 4 steps as figure (a) with the bind callback in place. 1. The yield function is evaluated to a yield thread and the locked yield thread is placed onto the
+yield queue. 2. Bind continues to execute but no worker threads are able to acquire the yield thread's lock therefore no worker threads will execute the yield thread. 3. Same as step 2. 4. Bind has finished and the next command begins
+executing. Bind has released the yield lock by calling the threads callback function which contains the {\em unlock code}. Now a thread is able to take the yield thread off the yield queue and begin execution with the correct waiters
+attached.}
+
 \label{fig:bind_callback}
 \end{figure}
-The problem occurs when attempting to bind a thread to a yield thread, so that it may be run asynchronously. The yield function adds a thread onto the yield queue instantly without the waiters being added to a waiter list. This means
+The problem occurs when attempting to bind a thread to a yield thread so that it may be run asynchronously. The yield function adds a thread onto the yield queue instantly without the waiters being added to a waiter list. This means
 that any worker thread is able to remove the yield thread from the queue and run it. At the point the bind has added a waiter function to the waiter list, the yield thread has finished executing and will therefore never run the
 waiters now attached. Finally the garbage collector picks up the yield thread which has finished and it is never to be seen again. 
 
@@ -897,7 +907,7 @@ The performance results of the merge sort algorithm are shown in the speed up gr
 $T_1 / T_n$ where $T_1$ is the time taken to perform the sort on 1 thread and $T_n$ is the time taken to execute the sort on n threads.
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{msort_speedup_graph}
-\caption{insert caption here}
+\caption{}
 \label{fig:msort_speedup_graph}
 \end{figure}
 There is a clear, almost linear speed up between using 0 and 8 cores for the sort, reaching up to

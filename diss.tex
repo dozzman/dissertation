@@ -907,11 +907,15 @@ The performance results of the merge sort algorithm are shown in the speed up gr
 $T_1 / T_n$ where $T_1$ is the time taken to perform the sort on 1 thread and $T_n$ is the time taken to execute the sort on n threads.
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{msort_speedup_graph}
-\caption{}
+\caption{The merge sort speedup graph, plotted with a range between 1 and 48 cores on the x~axis; speedup calculated as $T_{1} \over T_{\infty}$ along the y~axis. The graph shows a logarithmic curve which seems to plateau around 3.5
+-- 4 times speedup. The logarithmic shape is exactly what should be expected as the merge sort algorithm has maximum speed up in the order $\Theta(lg\,n)$ which is shown within section~\ref{subsec:merge_sort_performance_analysis}.
+This result is also mirrored in a vanilla Java merge sort speedup graph shown in figure~\ref{fig:java_speedup_graph}. Interesting aspects of the graph are the jitter, which can be explained by the fact that the asynchronous nature of
+the algorithm means that the execution paths are slightly different each time, in conjunction with the fact that the arrays are generated randomly each time with only similar length therefore the array ordering may cause a faster or
+slower execution time.}
 \label{fig:msort_speedup_graph}
 \end{figure}
-There is a clear, almost linear speed up between using 0 and 8 cores for the sort, reaching up to
-a maximum speed up of between approximately 3 or 4. However after this point, the graph seems to plateau with a little jitter inbetween successive increments in the number of cores.
+There is a clear, almost linear speed up between using 0 and 8 cores for the sort, reaching up to a maximum speed up of between approximately 3 or 4. However after this point, the graph seems to plateau with a little jitter inbetween
+successive increments in the number of cores.
 
 We can first analyse the serial and parallel merge sort algorithms mathematically and then apply this to the outcome of the graph. It is a well known fact that the average running time of merge sort is $\Theta(lg\,{n})$, this can be
 shown by considering the following recurrance relation:
@@ -924,7 +928,8 @@ T(n) =
     \end{cases}
 \]
 
-This recurrance relation is constructed by dividing the merge sort into its component operations: {\em Divide, Conquer and Combine}:
+This recurrance relation is constructed by dividing the merge sort into its component operations: {\em Divide, Conquer and Combine}\footnote{Divide, Conquer and Combine is the way CLRS describes the seperate stages of merge sort. I
+believe this is very clear and sensible and therefore have done the same here}:
 
 \begin{description}
 
@@ -999,10 +1004,13 @@ currently we have the results $T = T_{1} = \Theta(n\,lg\,n)$ and $T' = T_{\infty
 \text{Speed Up} = {T_{1} \over T_{\infty}} = {\Theta\left(n\,lg\,n\right) \over \Theta(n)} = \Theta(lg\,n)
 \end{align*}
 
-Therefore in fact we are expecting to see a logarithmic shaped graph as our speed up graph, which is exactly what figure~\ref{fig:msort_speedup_graph} shows us. Figure~\ref{fig:java_speedup_graph} shows a merge sort written in vanilla Java with the same test parameters and the speed up results obtained from these tests which mirrors the results obtained from using the interface.
+Therefore in fact we are expecting to see a logarithmic shaped graph as our speed up graph, which is exactly what figure~\ref{fig:msort_speedup_graph} shows us. Figure~\ref{fig:java_speedup_graph} shows a merge sort written in vanilla
+Java\cite{web:washington} with the same test parameters and the speed up results obtained from these tests which mirrors the results obtained from using the interface.
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{java_speedup_graph}
-\caption{insert caption here}
+\caption{The Java speedup graph, showing a merge sort written in Java, mirrors exactly what we have achieved by using the interface. The speedup in this graph plateau's at approximately 5 -- 5.5 which slightly greater than the
+interface's merge sort results as would be expected since the interface constructed on a few layers and therefore will omit more overheads. This graph also includes a little jitter which is again due to the changes between the array's
+values in between each test.}
 \label{fig:java_speedup_graph}
 \end{figure}
 This is a very good sign to suggest that the interface is performing well. The vanilla Java merge sort reaches a peak speed up of around 5 whereas the interface provides a peak speed up between 3 and 4 which is a confident result for

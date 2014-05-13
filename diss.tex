@@ -1014,16 +1014,16 @@ without LWT Threads.
 %
 % Fibonacci didn't show good parallelism, graph shown in fig whatever.
 %
+\subsubsection{Execution Time}
 The results of performance testing the recursive parallel fibonacci algorithm are displayed in figure~\ref{fig:fib_time_graph}.
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{fib_time_graph}
 \caption{insert caption here}
 \label{fig:fib_time_graph}
 \end{figure}
-This graph describes the execution time of the fibonacci algorithm where the
-x~axis denotes the fib number being calculated and the y axis denotes the time taken to calculate that fibonacci number. The graph clearly shows that calculating fibonacci on multiple cores actually performs worse than using the same
-recursive algorithm on a single core. This is highly counter intuitive under the assumption that more cores means more power. Although there are many more cores executing the fibonacci calculations, it would seem the overhead of
-managing many LWT threads is significant enough to completely negate any potential speed up gains from utilising multiple cores.
+This graph describes the execution time of the fibonacci algorithm where the x~axis denotes the fibonacci number being calculated and the y~axis denotes the time taken to calculate that fibonacci number. The graph clearly shows that
+calculating fibonacci on multiple cores actually performs worse than using the same recursive algorithm on a single core. This is highly counter intuitive under the assumption that more cores means more power. Although there are many
+more cores executing the fibonacci calculations, it would seem the overhead of managing many LWT threads is significant enough to completely negate any potential speed up gains from utilising multiple cores.
 
 %
 % Why? Well its because fib does only an addition operation, therefore most of the processing goes into thread management overheads. made even worse since threads are small and made frequently (although actually I think it's made the
@@ -1034,6 +1034,19 @@ perform execution. Within the calculation, the fib thread must bind on the resul
 child threads, such that when they both complete, the closure will be called with their return values and pass the result back up the chain. Eventually all these extra steps to perform a simple addition operation will consume the
 majority of the processing time, rather than actually aiding the execution speed of the fibonacci calculation. 
 
+% \subsubsection{Speedup}
+% \todo{May remove this graph as I can't explain why more cores is worse even if parallelism isn't exploited, it should at least be the same...}
+% The speed up graph also shows poor results using the current interface scheduling technique, which is shown in figure~\ref{fig:fib_speedup_graph}.
+% \begin{figure}[h!]
+% \includegraphics[width=\linewidth]{fib_speedup_graph}
+% \caption{insert caption here}
+% \label{fig:fib_speedup_graph}
+% \end{figure}
+% Almost resembling the merge sort speedup graph in figure~\ref{fig:msort_speedup_graph} upside down, the graph displays a negative speedup correlation against an increasing number of cores used to perform the calculation. This is a
+% particularly strange result since you would expect that the execution time would at least be roughly the same given that you are adding more processing power. However clearly there must be some externalities in play, similar to the
+% scheduler overheads from the previous section. 
+% 
+% The most sensible explanation of the results seems to be lock contention which the Fibonacci calculation exposes
 % might just remove this graph
 %The graph in figure blabla\todo{insert fib speed up graph} shows the relative speed up of calculating the value $fib(30)$ on a linearly increasing amount of cores, given by the x~axis. The data demonstrates a steep decline within
 %the first two cores becoming enabled and then a steady and far more shallow decline beyond this point. Again a similar problem to that previously demontr
@@ -1046,7 +1059,8 @@ majority of the processing time, rather than actually aiding the execution speed
 % Possible ways of improving the result is to reduce the threading overhead somehow, perhaps by assigning processors to subtrees of the fibonacci calculation until every processor is in use, then allow them to calculate the rest of
 % the sub tree. That would involve using a different scheduling technique which was of course part of my extended options if time allowed.
 %
-Overall the fibonacci calculation has not scaled well with the 
+Overall the fibonacci calculation has not scaled well with the current implementation of the interface, unlike the merge sort. However it may be possible to achieve better performance gains by using a different scheduling technique
+than the one currently in use.
 
 
 \chapter{Conclusions}
@@ -1054,9 +1068,38 @@ Overall the fibonacci calculation has not scaled well with the
 % Talk about what I wanted to do with the private public threads, how that would've overcome the `half-baked' threads problem and allowed me to construct a workstealer. The contention on the single thread queue could've been
 % aleviated.
 % talk about how I took on a massive project but should've broken it down to make it easier on myself.
+%
+% Overview of this chapter
+%
 
-\chapter{Bibliography}
-\label{chap:bibliography}
+%
+% Achievements and what I would've liked to continue working on
+%
+The final result of my dissertation has been successful. I have managed to complete all my success criteria and produce an interface which performs well under popular parallel benchmarks such as merge sort. Admittedly taking on such a
+large OCaml code base with only little prior knowledge of ML was a feat I underanticipated. The languages have a few differences, however the styles of development in the two languages are very independent of each other. A lot of the
+focus in learning ML was put on developing algorithms and data structures, whereas OCaml's Core library contains most of these algorithms and has an emphasis on using them instead. Furthermore in languages like C++ and Java there are
+structured and tested ways of producing systems with low coupling and high cohesion via object oriented programming techniques and design patterns, however in OCaml you can choose to use the modular system, the object system, neither
+or a mixture of both\cite{chailloux2000}. 
+
+That being said, I've learned a lot of important lessons about developing functional code and also project management. One of the main problems I had with this project was biting off more than I could chew. At times within LWT there
+was very high coupling between modules and I found myself attempting to juggle developing and converting code from many different locations in code at the same time in an attempt to keep the entire system working. Inevitably it served
+me better to attempt to reduce coupling as much as possible and focus on core sections of the code base, rather than as a whole. At times it was also characteristic of me to become `lost in the code', where I would be thinking of many
+other things I could do to better my project or produce cleaner code/tests. Whilst this is perhaps a good mindset to have when dealing with a project it can at times lead me astray from my targets and success criteria, therefore it
+was good to take a minute, step back and look at the picture as a whole: where I am right now, where I need to be and what I need to do to get there.
+
+\section{Future Work}
+In conjunction to the work already demonstrated within this project, I also have some ideas on how else some of the challenges in this project could have been overcome -- it would be interesting to see how the performance changes
+depending on how the interface is implemented.
+
+\subsection{Public/Private Queues}
+In section~\ref{subsubsec:thread_safety} I mentioned the `Half-Baked Thread' problem which meant that useless yield threads were being placed onto the yield queue and immediately removed by other threads before having any useful
+bindings attached. One other solution to this problem I have thought about was to have a seperate private and public queue per worker thread. As a worker thread is executing some code within an LWT thread, it will place any created
+threads into its private queue, which may contain threads that are or are not able to be executed. No other worker thread may have access to the private queue of any other worker thread. Once an LWT thread has terminated, the private
+queue will contain the new spawned threads which resulted from the LWT threads execution, furthermore they will be in a state where they are all ready to execute. The worker thread must then move these ready threads to the public
+queue, all bar one, and begin execution of the one retained thread. By keeping all the threads in the private queue until the LWT thread has finished execution, there is no chance that another thread will come along and take the
+incomplete thread and begin executing it. Only threads on the public queue are able to be taken by other threads for execution.\todo{along with work stealing implementations, only locks on thread queues and not threads themselves,
+etc}.
+
 \bibliography{resources}
 
 \chapter{Appendices}

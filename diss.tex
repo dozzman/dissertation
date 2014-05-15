@@ -97,16 +97,15 @@ Supervisor:         & Jeremy Yallop                   \\
 \section*{Original Aims of the Project}
 
 The aim of this project was to highlight the differences between single and multithreaded OCaml code. This was done by adapting the Lightweight Threading Library (LWT) -- a very popular threading library for OCaml -- to use the OCaml
-to Java bytecode compiler OCaml-Java, thus allowing software written with LWT to utilise the multithreading capabilities of the JVM. \todo{fill this out a bit more, maybe talk about what differences the project was looking for/found}
+to Java bytecode compiler OCaml-Java, thus allowing software written with LWT to utilise the multithreading capabilities of the JVM.
 
 \section*{Work Completed}
-{\bf Pinkbook says at most 100 words summarising work completed, e.g. scheduler of LWT to OCaml-Java threads, worker public/private queue structure, benchmarks, etc.}
-The LWT threading capabilities have been integrated with OCaml-Java, thus allowing some LWT programs to compile to Java bytecode and run in parallel on the JVM. This is done using a scheduler algorithm which maps LWT threads to
-Java threads. \todo{fill this out some more as well when possible}
+The LWT threading capabilities have been integrated with OCaml-Java via the development of my interface, thus allowing a subset of LWT programs to compile to Java bytecode and run in parallel on the JVM. This is done by scheduling
+lightweight threads between Java worker threads which continuously execute code until interrupted. Test code written for this interface achieve similar speedup gains to code written directly in Java (speedup of 3.5 -- 4 with the
+interface compared to a speedup of 5 -- 5.5 on vanilla Java), with an again similar speedup curve -- which is a very positive result. 
 
 \section*{Special Difficulties}
-{\bf Pinkbook says at most 100 words describing special difficulties, but most should just say "None" }
-None, {\em possibly}.
+None
 
 \newpage
 \section*{Declaration}
@@ -132,11 +131,8 @@ extent for a comparable purpose.
 
 \newpage
 \section*{Acknowledgements}
-\todo{add thanks at the end}
-This document owes much to an earlier version written by Simon Moore
-.  His help, encouragement and advice was greatly 
-appreciated.
-
+This project was a success thanks to the help of my supervisor Jeremy Yallop, Leo White at the OCaml Labs, Malte Schwarzkopf for his motivation and gift ideas and finally Xavier Clerc for his example code which made developing the
+interface a whole lot easier.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % now for the chapters
 
@@ -171,61 +167,54 @@ appreciated.
 %
 % Talk about why multithreading is important
 %
-\todo{this para is sounds like a history talk which is what thingybob told us not to do}
-Trends current trends in chip advancement have shown that since around 2003\cite{hennessy2012}, the growth in processor frequency has effectively plateaued and computer architects have had to look for different methods of achieving
-greater computational power. The diminishing returns of processor frequency have been greatly effected by the amount of energy required to switch a transistor's output -- known as the {\em dynamic energy}. This dynamic energy needs to
-be dissapated through the side of the chip die at a size of around 1.5cm. Clearly this becomes an increasingly difficult task for processors with greater clock frequencies which generate more heat energy to dissipate. As a result of
-this and some other unmentioned factors, the focus of achieving greater performance has moved from clock frequency improvements to parallel processing. Therefore it is important for software developers to create software that is
-able to take full advantage of the hardware of today and estimate ways to make it scale on the hardware of tomorrow.
+Multi-core processors are the focus of chip development in this current day and age. Systems need to continue to increase chip parallelism as this has become the main approach for achieving faster code execution since CPU frequency
+speeds plateaued around 2003\cite{hennessy2012}. Of course it is also important for languages and compilers to utilise these advancements in technology, otherwise they will soon become useless for modern software development and
+developers will begin to seek more appropriate alternatives that provide them the development resources they need. There also exist software libraries such as OpenCL that are specifically designed to utilise extra computational power
+from your GPU which is normally inaccessible for general processing tasks. Clearly parallel processing is a very important topic and is currently a very active research area therefore it is well worth discussion.
 \\
 \\
 %
 % Talk about why functional programming is important
 %
 Functional Programming concepts have been around since Turing and Church's work in the 1930's\cite{scott2009} but have become more popular in recent times. The expressiveness that functional programming paradigms give the programmer
-has finally caught on in mainstream development and as such languages such as C++ and Java are incorperating notable functional programming techniques such as type inference\cite{web:autokeyword} and first-class anonymous functions
-(lambas)\cite{web:javalambda}. Notable functional languages include Haskell and ML which have inspired more widely used functional languages such as OCaml\cite{madhavapeddy2013}. OCaml is a very extensive functional language which
-also includes an elegant object system, thus incorperating the best of both functional and imperative programming techniques and making it a very powerful language to develop with. Unfortunately OCaml in it's current vanilla state is
-unable to compile parallel code, which is becoming an ever more neccessary approach to development as systems become more and more parallel.
+has finally caught on in mainstream development and therefore languages such as C++ and Java are incorporating notable functional programming techniques such as type inference\cite{web:autokeyword} and first-class anonymous functions
+(lambdas)\cite{web:javalambda}. Notable functional languages include Haskell and ML (which has inspired more widely used functional languages for example OCaml\cite{madhavapeddy2013}). OCaml is a very extensive functional language
+which also includes an elegant object system, which incorporates the best of both functional and imperative programming techniques. The ability to develop in these two different programming styles interchangeably makes OCaml a very
+powerful language to develop with. Unfortunately OCaml in it's current vanilla state is unable to compile parallel code, which of course is becoming an ever more necessary approach to development as systems become more and more
+parallel.
 \\
 \\
 %
 % Talk about how java has multithreading but no functional, whereas OCaml is functional with no multithreading
 %
-Java on the other hand is a very good imperative programming language/system. It compiles to bytecode which runs on it's virtual machine which is implemented in everything from ATM's and credit card Chips\todo{cite where it says ATM's
-and credit card chips use Java} to home desktops and servers -- leading to one of the slogan's \todo{find where this slogan is written} `{\em write once, run everywhere}'. Over the years the JVM has become highly optimised to the
-hardware/systems that it runs on such that there is little diffrence between Java code running on the JVM and natively compiled code. Furthermore, Java supports parallel processing, fully utilising any number of cores/hardware threads
-that the system has to offer.
+Java is a mature imperative programming language/system widely used in industry to build multithreaded software\cite{web:matlab}. It compiles to Java bytecode which runs on it's virtual machine which in turn is able to run on
+everything from ATM's and credit card chips to home desktops and servers -- leading to one of the Java slogans `{\em write once, run everywhere}'. Over the years the JVM has become highly optimised to the hardware/systems that it runs
+on such that there is little difference between Java code running on the JVM and natively compiled code. Furthermore, Java supports parallel processing, fully utilising any number of cores/hardware threads that the system has to
+offer.
 \\
 \\
 %
 % Talk about how OCaml-Java merges the two but is in need of a sufficient threading library, many exist (LWT, Async) but are not yet compatible. This is where my project comes in.
 %
-A peice of software called OCaml-Java aims to merge best aspects of both languages together to create a better OCaml programming solution. It achieves this by compiling OCaml code to Java bytecode, thus allowing it to run on any JVM.
+A piece of software called OCaml-Java aims to merge the best aspects of both OCaml and Java together to create a better OCaml programming solution. It achieves this by compiling OCaml code to Java bytecode, thus allowing it to run on
+almost any JVM.
 This means two things:
 \begin{itemize}
 \item OCaml can now be written to run on a wide variety of hardware/systems.
-\item OCaml can use Java's multithreading capabilities to run fully parallel OCaml code\cite{clerc2012}
+\item OCaml can use Java's multithreading capabilities to run fully parallel OCaml code\cite{clerc2012}.
 \end{itemize}
-OCaml-Java comes with a basic collection of concurrency tools which are essentially a small subset of Java's own concurrency library, with wrappers which allows access to them from within OCaml. Clearly the concurrency techniques
-provided by Java do not nicely translate to the way concurrency is done in a functional programming language like OCaml. There already exist extremely good and highly optimised OCaml concurrency libraries such as Async by Jane Street
-and LWT (Lightweight Threads Library) by Ocsigen, however these will not directly work with OCaml-Java when compiled to Java bytecode. Somehow getting one of these OCaml concurrency libraries working with OCaml-Java would demonstrate
-OCaml-Java's true potential for parallel OCaml code, written in the functional flavour that works best with the OCaml language -- this is the motivation for my project.
-\\
+OCaml-Java comes with a basic collection of concurrency tools which are essentially a small subset of Java's own concurrency library with wrappers that allow access from within OCaml. Unfortunately the concurrency techniques provided
+by Java do not nicely translate to the way concurrency is done in a functional programming language like OCaml. There do exist commercially-used, optimised OCaml concurrency libraries such as Async by Jane Street and LWT (Lightweight
+Threads Library) by Ocsigen, however these do not function when compiled to Java bytecode via OCaml-Java as they rely on the Unix bindings and threads provided either by the OCaml library or similar ones constructed in house.  If we
+could get one of these OCaml concurrency libraries to work when compiled with OCaml-Java, we could demonstrate OCaml-Java's true potential to create parallel OCaml code, and OCaml's true capabilities as a parallel programming language
+-- this is the motivation for my project.  \\
 \\
 %
 % Briefly outline project, and where I this dissertation will take the reader on their journey
 %
-My project aims to interface OCaml-Java and the LWT concurrency library in order to demonstrate OCaml-Java's potential for parallelised OCaml code. The rest of this document outlines the preparation and research I conducted in order
-to plan my approach to this project in chapter~\ref{chap:preparation}; the methods and processes that were used to implement the project in chapter~\ref{chap:implementation} and the result of the project development and the work
-process as a whole in chapter~\ref{chap:evaluation}. My code can also be found in chapter~\ref{chap:code_samples}.
-\\
-\\
-%
-% Cant think of any related work off the top of my head... Might delete this little section
-%
-\section{Related Work}
-\label{sec:related_work}
+My project aims to interface OCaml-Java and the LWT concurrency library in order to demonstrate OCaml's potential as a parallel programming language. The rest of this document outlines the preparation and research I conducted in order
+to plan my approach to this project (chapter~\ref{chap:preparation}); the methods and processes that were used to implement the project (chapter~\ref{chap:implementation}) and the result of the project development
+(chapter~\ref{chap:evaluation}) and the work process as a whole (chapter~\ref{chap:conclusions}). My code can also be found in appendix~\ref{chap:code_samples}.
 
 
 % \todo{I don't like the jump between these two paragraphs, seems illogical but they're connected later on}
@@ -253,7 +242,7 @@ process as a whole in chapter~\ref{chap:evaluation}. My code can also be found i
 % Researched into ways of doing concurrent processing in OCaml.
 % in conjunction with the OCaml threads library, there are also other threading libraries with a richer feature set, expanding on the OCaml threads library, such as LWT, ASync.
 % ultimately the as to which one was solely based on the fact that LWT is more popular, (as I have never worked with either and wouldn't have time to test both of them out and decide which I would like to work with the most).
-% Projects exist (such as those given in OCaml-Java paper) on multicore implementations of ocaml
+% Projects exist (such as those given in OCaml-Java paper) on multi-core implementations of ocaml
 % Research into LWT
 % Lwt is an extensive concurrency suite for OCaml which uses lightweight threads that are created and destroyed very quickly.
 % almost all expressions used within LWT results in a thread being created, which returns the answer.
@@ -278,8 +267,7 @@ process as a whole in chapter~\ref{chap:evaluation}. My code can also be found i
 %
 The following chapter outlines the processes taken in preparation for the project's implementation. I begin with a look into OCaml's multithreaded capabilities, including the limitations on developing parallel code and why these
 limitations exist. I also discuss LWT's own asynchronous library in comparisson to Java's and the difficulties that may occur when attempting to interface the two. OCaml-Java is overviewed, including what tools become available with
-it's use and how it manages to provide the user with concurrency when writing parallel OCaml code. Finally the research is concluded with a set of requirements which I believe are representative of what the project should hope to
-achieve and the tools/software I will be using throught it's development.
+it's use and how it manages to provide the user with concurrency when writing parallel OCaml code. 
 
 \section{Investigating Multithreaded OCaml}
 \label{sec:investigating_multithreaded_ocaml}
@@ -389,25 +377,6 @@ the types of Java objects need to have their own defining types within OCaml. Th
 substituting dots with quotes to abide by the OCaml syntactic rules\cite{web:clerc2013}, therefore the equivalent OCaml type for `java.lang.Object' would be `java'lang'Object java\_instance'.
 \\
 \\
-\section{Requirements Analysis}
-\label{sec:requirements_analysis}
-%
-% Requirements analysis, what this project has told me about what I need to do/achieve, etc.
-%
-As a result of my investigations into OCaml, OCaml-Java and LWT, I belive that the interface between multithreaded OCaml-Java and LWT must meet the following requirements:
-
-\begin{description}
-\item[Requirement 1]
-
-As discovered in section~\ref{sec:investigating_lwt} OCaml threads and Java threads behave very differently, especially in terms of thread creation overheads. Therefore it is neccessary to create a mapping from LWT threads to Java
-threads using a scheduler to perform the mapping operations.
-
-\item[Requirement 2]
-??
-
-\item[Requirement 3]
-??
-\end{description}
 
 \section{Choice of Tools}
 \label{sec:choice_of_tools}
@@ -450,8 +419,8 @@ pushed to frequently.
 %
 Within this chapter I have demonstrated the process of planning and investigation taken in order to prepare for the projects implementation. I have investigated the ways that OCaml and LWT are able to perform asynchronous code
 execution, including the cause for OCaml's limitations in fully parallel code compilation and the differences between LWT and Java's handling of threads. Furthermore I have demonstrated a few tools that OCaml-Java has introduced which
-allow parallel OCaml code to be written and run on the JVM. Using this information I constructed a set of requirements that I believe are neccessary for this project to adhere to in order to achieve the success criteria. Finally I
-explained that Vim will be my choice of IDE, running on Mac OSX; Git and Github will be used for version control and in addition the PWF facilities and Dropbox will be used for backup.
+allow parallel OCaml code to be written and run on the JVM.  Finally I explained that Vim will be my choice of IDE, running on Mac OSX; Git and Github will be used for version control and in addition the PWF facilities and Dropbox
+will be used for backup.
 
 \chapter{Implementation}
 \label{chap:implementation}
@@ -884,7 +853,6 @@ Options Are:
 \end{lstlisting}
 Without any parameters passed, the test suite simply runs the default tests which provide appropriate numbers for analysis.
 
-
 \section{Merge Sort}
 \label{sec:merge_sort}
 The parallel merge sort algorithm briefly mentioned in section~\ref{sec:profiling} provides a good parallelism benchmark to test the interface with. Firstly, each recursive call of the merge sort works on a completely independent sub
@@ -899,7 +867,6 @@ Apart from the actual sorting algorithm, there is the situation of creating appr
 of the array: that is, an array of length 10 will contain only the numbers 1 -- 10 at random. This made specifying the range of numbers to the OCaml {\tt Random.int} function easier mostly. Furthermore the merge sort algorithm was to
 be run at least twice, once using LWT with no parallelism and one with parallelism, therefore I made copies of the arrays and provided the copies to each function so that they would work on the same, equal data -- however the array's
 do change between different instantiations of the test, such as when changing the number of worker threads being tested.
-
 
 \subsection{Performance Analysis}
 \subsubsection{Merge Sort Speedup}
@@ -1081,8 +1048,9 @@ more cores executing the fibonacci calculations, it would seem the overhead of m
 %
 At ecah stage in the fibonacci calculation, a new thread is created for that recursive step. Once the thread is created, it is popped onto the yield queue and may sit there for a while until it is acquired by a worker thread to
 perform execution. Within the calculation, the fib thread must bind on the result of both it's child threads and perform an addition. This bind operation consists of creating a closure containing an addition operation and the two
-child threads, such that when they both complete, the closure will be called with their return values and pass the result back up the chain. Eventually all these extra steps to perform a simple addition operation will consume the
-majority of the processing time, rather than actually aiding the execution speed of the fibonacci calculation. 
+child threads, such that when they both complete, the closure will be called with their return values and pass the result back up the chain. We discovered in the last section that the average running time for all these steps is
+roughly 0.11 ms which is a relatively significant amount of time. Furthermore all these extra steps are produced to simply perform a single addition operation which means the majority of the processing done on the worker thread is the
+thread management rather than the algorithm processing.
 
 % \subsubsection{Speedup}
 % \todo{May remove this graph as I can't explain why more cores is worse even if parallelism isn't exploited, it should at least be the same...}
@@ -1110,9 +1078,17 @@ majority of the processing time, rather than actually aiding the execution speed
 % the sub tree. That would involve using a different scheduling technique which was of course part of my extended options if time allowed.
 %
 Overall the fibonacci calculation has not scaled well with the current implementation of the interface, unlike the merge sort. However it may be possible to achieve better performance gains by using a different scheduling technique
-than the one currently in use.
+than the one currently in use. Furthermore the current implementation of the parallel Fibonacci continues to recurse until it reaches $fib(0)$ or $fib(1)$, by limiting the recursion depth of the Fibonacci algorithm in a similar
+fashion to the linear sort limit of the merge sort algorithm, we can combine more processing potential into a single lightweight thread and definitely achieve better results.
 
 \section{Summary}
+Within this chapter, I discussed how the merge sort algorithm was tested and also the performance of the merge sort algorithm when executed with the interface. The results obtained demonstrated the interface's true ability to utilise
+multiple cores and execute parallel LWT code with appropriate speedup gains, achieving a speedup of 3 -- 4 in comparrisson to a vanilla Java merge sort algorithm which achieved a speedup of 5 -- 5.5 with the same test parameters. The
+reason to the graph shape was proven as the theoretical speedup of the merge sort algorithm and was observed in both the interface parallel merge sort and the vanilla Java merge sort results. We also used the variation of the linear
+sort limit to determine the approximate thread management overhead of the lightweight threads, which resulted in 0.11 ms -- a good result considering OCaml-Java's approximately 33\% reduction in execution speed.
+
+The parallel Fibonacci algorithm provided somewhat different results as we discovered the recursive Fibonacci algorithm mainly exposed thread overhead times since the algorithm continues to recurse until it reaches $fib(0)$ or
+$fib(1)$. However we determined that setting a recursion limit would move the majority of the processing time from thread management to algorithm execution in a similar way to the linear sort limit in the merge sort algorithm.
 
 \chapter{Conclusions}
 \label{chap:conclusions}
@@ -1153,7 +1129,28 @@ incomplete thread and begin executing it. Only threads on the public queue are a
 etc}.
 
 \bibliography{resources}
+
 \appendix
+\chapter{Notes}
+\section{Machine Specifications}
+The following are specifications for the machines used during the testing and development of the interface:
+
+\subsubsection{`Roo' Multicore Machine - Main Test Machine}
+\begin{itemize}
+\item {\em Processor} \hfill \\
+AMD Opteron\texttrademark\ 6344 Processor (12 logical cores, 6 physical cores @ 2.6 GHz) ($\times4$)
+\item {\em Main Memory} \hfill \\
+64GB RAM
+\end{itemize}
+
+\subsection{Macbook Air 2013 - Main Development Machine}
+\begin{itemize}
+\item {\em Processor} \hfill \\
+Intel Core i7 (4 logical cores, 2 physical cores @ 2.6 GHz)
+\item {\em Main Memory} \hfill \\
+8GB RAM
+\end{itemize}
+
 \chapter{Code Samples}
 \label{chap:code_samples}
 The following appendix contains relevant code samples which have been referred to within my dissertation.
@@ -1166,6 +1163,11 @@ shows each of these versions.
 \section{Parallel Merge Sort Implementation (msort.ml)}
 Similar to the fibonacci implementation, the merge sort was also written in three different ways.
 \lstinputlisting[frame=none]{msort.ml}
+
+\section{Worker Thread}
+The following code runs on each Java worker thread and processes lightweight threads until interrupted, this loop is relatively small in order to try and keep the bulk of the processing in the lightweight thread rather than the thread
+management overheads.
+\lstinputlisting[frame=none]{worker.ml}
 
 \chapter{Project Proposal}
 \label{chap:proposal}

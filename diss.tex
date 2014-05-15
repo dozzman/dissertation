@@ -1,7 +1,7 @@
 % The master copy of this demo dissertation is held on Dr. Martin Richards filespace
 % on the cl file serve (/homes/mr/teaching/demodissert/)
 
-% Last Updated by Dorian Peake in 2014
+%% Last Updated by Dorian Peake in 2014
 
 \documentclass[12pt,twoside,notitlepage]{report}
 
@@ -13,7 +13,6 @@
 \usepackage{color}
 \usepackage{graphicx}
 \usepackage{amsmath}
-\pdfpageattr {/Group << /S /Transparency /I true /CS /DeviceRGB>>}
 
 % set default language to OCaml
 \lstset{language=[Objective]Caml,
@@ -22,7 +21,9 @@
         numbers=left,
         breaklines=true,
         keepspaces=true,
-        frame=single
+        frame=single,
+        showspaces=false,
+        showstringspaces=false
 }
 
 %\input{epsf}                            % to allow postscript inclusions
@@ -47,7 +48,6 @@
 \begin{document}
 
 \bibliographystyle{plain}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Title
@@ -218,7 +218,7 @@ OCaml-Java's true potential for parallel OCaml code, written in the functional f
 %
 My project aims to interface OCaml-Java and the LWT concurrency library in order to demonstrate OCaml-Java's potential for parallelised OCaml code. The rest of this document outlines the preparation and research I conducted in order
 to plan my approach to this project in chapter~\ref{chap:preparation}; the methods and processes that were used to implement the project in chapter~\ref{chap:implementation} and the result of the project development and the work
-process as a whole in chapter~\ref{chap:evaluation}. My code can also be found in chapter~\ref{chap:appendices}.
+process as a whole in chapter~\ref{chap:evaluation}. My code can also be found in chapter~\ref{chap:code_samples}.
 \\
 \\
 %
@@ -902,6 +902,7 @@ do change between different instantiations of the test, such as when changing th
 
 
 \subsection{Performance Analysis}
+\subsubsection{Merge Sort Speedup}
 \label{subsec:merge_sort_performance_analysis}
 The performance results of the merge sort algorithm are shown in the speed up graph in figure~\ref{fig:msort_speedup_graph}, where the x~axis gives the number of cores in use and the y~axis is the speed up, calculatated as
 $T_1 / T_n$ where $T_1$ is the time taken to perform the sort on 1 thread and $T_n$ is the time taken to execute the sort on n threads.
@@ -1001,7 +1002,7 @@ Taking into consideration the ability to run the recursive calls on many process
 currently we have the results $T = T_{1} = \Theta(n\,lg\,n)$ and $T' = T_{\infty} = \Theta(n)$, for which we can use to calculate the theoretical speed up between serial and parallel merge sort:
 
 \begin{align*}
-\text{Speed Up} = {T_{1} \over T_{\infty}} = {\Theta\left(n\,lg\,n\right) \over \Theta(n)} = \Theta(lg\,n)
+\text{Speedup} = {T_{1} \over T_{\infty}} = {\Theta\left(n\,lg\,n\right) \over \Theta(n)} = \Theta(lg\,n)
 \end{align*}
 
 Therefore in fact we are expecting to see a logarithmic shaped graph as our speed up graph, which is exactly what figure~\ref{fig:msort_speedup_graph} shows us. Figure~\ref{fig:java_speedup_graph} shows a merge sort written in vanilla
@@ -1016,6 +1017,37 @@ values in between each test.}
 This is a very good sign to suggest that the interface is performing well. The vanilla Java merge sort reaches a peak speed up of around 5 whereas the interface provides a peak speed up between 3 and 4 which is a confident result for
 both the OCaml-Java compiler and the interface. 
 
+\subsubsection{Thread Scheduling Overhead}
+The last section dealt with understanding the speedup properties of the merge sort algorithm and comparing that to the test results achieved. One important aspect that wasn't taken into account is the overhead caused by the scheduler
+and how much that actually effects the computation time of the merge sort algorithm. We can determine the threading overheads in terms of the execution time of the merge sort by alternating the linear sort limit of the merge sort
+algorithm -- which is the maximum array size that will be sorted on one thread, i.e. linearly. For a smaller linear sort limit, the merge sort algorithm does less computation per core and more lightweight threads are created as there
+are more divisons of the array to be made before the linear sort limit is reached. However at some point we expect the lightweight threads to be sorting siginficant portions of the array such that the threading overheads are
+negligible. Increasing the linear sort limit again beyond this point will result in a longer execution time as the algorithm will not divide the data up enough to keep all worker threads continuously busy. It is the point at which the
+lightweight thread overheads become equal to the work done by the linear sorts which is important to us. At this point we can divide the execution cost roughly between thread scheduling and linear sort execution times in order to
+calculate the average overhead per thread. The point at which this occurs is roughly the of the point at which the speedup gains from increasing the linear sort length begin to plateau. Figure~\ref{fig:sort_limit_graph} shows the test
+results collected from increasing the sort limit along the x~axis for an array size of 30 million.
+
+\begin{figure}[h!]
+\includegraphics[width=\linewidth]{sort_limit_graph}
+\caption{insert caption here}
+\label{fig:sort_limit_graph}
+\end{figure}
+
+It's clear to see the beginning of the plateau occurs around 8 on the x~axis, which being a $log_{2}$ scale corresponds to a sort limit of 256 values. The total amount of threads created at this point can be calculated as:
+
+\[ threads = \lceil2^{log_{2}(30,000,000) - log_{2}(256)}\rceil - 1\]
+
+Since the height of the merge sort array division tree is $\lceil log_{2}(30,000,000) - log_{2}(256)\rceil = h$ and the number of threads equals the number of leaves within the tree, calculated as $2^{h}-1$. Finally we simply need to
+divide half the execution time by the total amount of threads to get the average overhead per thread in nano seconds:
+
+\begin{align*}
+avg\,overhead &= \frac{13426901208}{\lceil2^{log_{2}(30,000,000) - log_{2}(256)}\rceil - 1} \\
+                    &= 0.11\,ms
+\end{align*}
+
+That's quite a long overhead for a lightweight thread, however considering that OCaml-Java itself is approximately 3 times slower in executing natively compiled OCaml code\cite{web:clerc2013} the large overhead was to be expected.
+There are subtle ways to improve the overheads without interfering with OCaml-Java, however the speedup results of the parallel merge sort algorithm still show very positive results regardless of this thread overhead.
+
 \section{Fibonacci}
 \label{sec:fibonacci}
 %
@@ -1023,7 +1055,7 @@ both the OCaml-Java compiler and the interface.
 %
 Also mentioned in section~\ref{sec:profiling} was the recursive fibonacci algorithm for use in profiling the interface. The recursive algorithm is easily parallelised by spawning child threads at each recursive call until the base
 case is reached. Each thread spawned is placed onto the yield queue, until a worker thread is able to pick it up and either perform the base case calculation or process the next recursive step -- creating more threads on the yield
-queue.  The parent thread will then synchronise on both child threads completing and use those results to calculate it's own fibonacci result. This propagates back up the fibonacci recursive tree until the final result is calculated
+queue. The parent thread will then synchronise on both child threads completing and use those results to calculate it's own fibonacci result. This propagates back up the fibonacci recursive tree until the final result is calculated
 and returned to the initial caller function. A graphical depiction of this process is shown in figure bla bla bla\todo{draw this fibonacci tree with threads put on thread queue}, furthermore listing bla \todo{add fibonacci code
 listing} contains the code which achieves the parallel fibonacci calculation in conjunction with listing blabla\todo{add normal fib listing here} which performs the same recursive fibonacci calculation within the LWT framework, but
 without LWT Threads.
@@ -1080,6 +1112,7 @@ majority of the processing time, rather than actually aiding the execution speed
 Overall the fibonacci calculation has not scaled well with the current implementation of the interface, unlike the merge sort. However it may be possible to achieve better performance gains by using a different scheduling technique
 than the one currently in use.
 
+\section{Summary}
 
 \chapter{Conclusions}
 \label{chap:conclusions}
@@ -1120,9 +1153,19 @@ incomplete thread and begin executing it. Only threads on the public queue are a
 etc}.
 
 \bibliography{resources}
+\appendix
+\chapter{Code Samples}
+\label{chap:code_samples}
+The following appendix contains relevant code samples which have been referred to within my dissertation.
 
-\chapter{Appendices}
-\label{chap:appendices}
+\section{Recursive Parallel Fibonacci Implementation (fib.ml)}
+The recursive fibonacci algorithm was implemented 3 times in different ways in order to compare the vanilla, asynchronous and parallel versions for execution time, speed up and other relevent measurements. The following code listing
+shows each of these versions.
+\lstinputlisting[frame=none]{fib.ml}
+
+\section{Parallel Merge Sort Implementation (msort.ml)}
+Similar to the fibonacci implementation, the merge sort was also written in three different ways.
+\lstinputlisting[frame=none]{msort.ml}
 
 \chapter{Project Proposal}
 \label{chap:proposal}

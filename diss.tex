@@ -171,8 +171,8 @@ Multi-core processors are the focus of chip development in this current day and 
 speeds plateaued around 2003\cite{hennessy2012}. Of course it is also important for languages and compilers to utilise these advancements in technology, otherwise they will soon become useless for modern software development and
 developers will begin to seek more appropriate alternatives that provide them the development resources they need. There also exist software libraries such as OpenCL that are specifically designed to utilise extra computational power
 from your GPU which is normally inaccessible for general processing tasks. Clearly parallel processing is a very important topic and is currently a very active research area therefore it is well worth discussion.
-\\
-\\
+\hfill\\
+\hfill\\
 %
 % Talk about why functional programming is important
 %
@@ -182,8 +182,8 @@ has finally caught on in mainstream development and therefore languages such as 
 which also includes an elegant object system, which incorporates the best of both functional and imperative programming techniques. The ability to develop in these two different programming styles interchangeably makes OCaml a very
 powerful language to develop with. Unfortunately OCaml in it's current vanilla state is unable to compile parallel code, which of course is becoming an ever more necessary approach to development as systems become more and more
 parallel.
-\\
-\\
+\hfill\\
+\hfill\\
 %
 % Talk about how java has multithreading but no functional, whereas OCaml is functional with no multithreading
 %
@@ -191,12 +191,12 @@ Java is a mature imperative programming language/system widely used in industry 
 everything from ATM's and credit card chips to home desktops and servers -- leading to one of the Java slogans `{\em write once, run everywhere}'. Over the years the JVM has become highly optimised to the hardware/systems that it runs
 on such that there is little difference between Java code running on the JVM and natively compiled code. Furthermore, Java supports parallel processing, fully utilising any number of cores/hardware threads that the system has to
 offer.
-\\
-\\
+\hfill\\
+\hfill\\
 %
 % Talk about how OCaml-Java merges the two but is in need of a sufficient threading library, many exist (LWT, Async) but are not yet compatible. This is where my project comes in.
 %
-A piece of software called OCaml-Java aims to merge the best aspects of both OCaml and Java together to create a better OCaml programming solution. It achieves this by compiling OCaml code to Java bytecode, thus allowing it to run on
+A project called OCaml-Java aims to merge the best aspects of both OCaml and Java together to create a better OCaml programming solution. It achieves this by compiling OCaml code to Java bytecode, thus allowing it to run on
 almost any JVM.
 This means two things:
 \begin{itemize}
@@ -207,8 +207,9 @@ OCaml-Java comes with a basic collection of concurrency tools which are essentia
 by Java do not nicely translate to the way concurrency is done in a functional programming language like OCaml. There do exist commercially-used, optimised OCaml concurrency libraries such as Async by Jane Street and LWT (Lightweight
 Threads Library) by Ocsigen, however these do not function when compiled to Java bytecode via OCaml-Java as they rely on the Unix bindings and threads provided either by the OCaml library or similar ones constructed in house.  If we
 could get one of these OCaml concurrency libraries to work when compiled with OCaml-Java, we could demonstrate OCaml-Java's true potential to create parallel OCaml code, and OCaml's true capabilities as a parallel programming language
--- this is the motivation for my project.  \\
-\\
+-- this is the motivation for my project. 
+\hfill\\
+\hfill\\
 %
 % Briefly outline project, and where I this dissertation will take the reader on their journey
 %
@@ -265,86 +266,92 @@ to plan my approach to this project (chapter~\ref{chap:preparation}); the method
 %
 % Outline of what is to come in this chapter
 %
-The following chapter outlines the processes taken in preparation for the project's implementation. I begin with a look into OCaml's multithreaded capabilities, including the limitations on developing parallel code and why these
-limitations exist. I also discuss LWT's own asynchronous library in comparisson to Java's and the difficulties that may occur when attempting to interface the two. OCaml-Java is overviewed, including what tools become available with
-it's use and how it manages to provide the user with concurrency when writing parallel OCaml code. 
+\hfill\\
+This chapter outlines the processes taken in preparation for the project's implementation. I begin with a look into OCaml's multithreaded capabilities, including the limitations around developing parallel OCaml code and why these
+limitations exist. I also compare LWT's own asynchronous library in comparison to Java's and the difficulties that may occur when attempting to interface the two. Finally there is an overview of OCaml-Java, including what tools become
+available with its use, and its concurrency modules which provide the user with the ability to write parallel OCaml code. 
 
 \section{Investigating Multithreaded OCaml}
 \label{sec:investigating_multithreaded_ocaml}
 %
 % Talk about what makes it impossible to run parallel OCaml code and why OCaml-Java can
 %
-In order to outline the best implementation plan for the LWT--OCaml-Java interface, it was neccessary to understand the limitations that OCaml possessed in compiling parallel code. The OCaml-Java paper from the 2012 `Trends in
-Functional Programming' collection\cite{clerc2012} gives rise to the reason -- stating that the Core OCaml library is not reentant and the OCaml garbage collector is neither parallel nor concurrent. Making the Core library reentrant
-is a relatively straight forward change to the system, however making the garbage collector parallel is not as simple. Ultimately there are many ways to perform concurrent and parallel garbage collection, however this has proven to be
-`too complex' for the current state of the OCaml system\todo{cite this, definitely saw this somewhere}. Java's G1 is fully parallel\todo{cite me} and allows multithreaded support of Java applications, therefore by compiling OCaml code
-do java bytecode, the language may utilise Java's parallelism capabilities.
-\\
-\\
+In order to outline the best implementation plan for the LWT--OCaml-Java interface, it was necessary to understand OCaml's limitations in compiling parallel code. The OCaml-Java paper from the 2012 `Trends in Functional Programming'
+collection\cite{clerc2012} states the reason -- the runtime OCaml library is not reentrant and the OCaml garbage collector is neither parallel nor concurrent. Making the runtime library reentrant is a relatively straightforward change
+to the system in comparison to making the garbage collector parallel -- which is far more involved -- therefore the real problem is developing a concurrent and parallel garbage collector. Java's G1 garbage collector is fully
+parallel\cite{web:garbage-first} and as a result provides multithreaded support of Java applications. Therefore by compiling OCaml code to Java bytecode, the OCaml language may utilise Java's parallelism capabilities.
+\hfill\\
+\hfill\\
 %
 % Talk about ways of doing concurrent processing in OCaml
 %
-It was neccessary to decide which of the popular concurrency libraries available to OCaml I should use for the purposes of this project therefore I researched into OCaml's ability to produce concurrent OCaml code, which lead me to
-OCaml's own inbuilt threads libarary. The OCaml manual\cite{leroy2013} describes the OCaml threads as being concurrently on a single processor using
-time sharing. However there exist other concurrency libraries which boast a richer feature set than the one provided by OCaml as default. Examples of these languages are Async -- developed by Jane Street Capital\todo{cite me} -- and LWT
-(Lightweight threads library) -- developed by Ocsigen\todo{cite me also}. These are the two main concurrency packages used within OCaml development, choosing one to use within my project was simply a matter of popularity, my reasoning
-is that they are both extremely good packages and would serve well to demonstrate the capabilities of multithreaded OCaml-Java.
-\\
-\\
+It was necessary to decide which of the popular concurrency libraries available to OCaml I should use for the purposes of this project therefore I researched into OCaml's ability to produce concurrent OCaml code. This research led me
+to OCaml's own inbuilt threads library. These native threads are designed for single core asynchronous development as the OCaml manual\cite{leroy2013} describes OCaml threads as executing concurrently on a single processor using time
+sharing. There exist other concurrency libraries which boast a richer feature set than the one provided by OCaml as default. Examples of these libraries include Async -- developed by Jane Street Capital\footnote{Async Library --
+https://github.com/janestreet/async} -- and LWT (Lightweight Threads Library) -- developed by Ocsigen\footnote{Lightweight Threads Library -- https://github.com/ocsigen/lwt}. These are the two main concurrency packages used within
+OCaml development, choosing one to use within my project boiled down to which one was most popular. My reasoning is that they are both extremely good packages and would serve well to demonstrate the capabilities of multithreaded
+OCaml-Java. LWT won this battle.
+
 \section{Investigating LWT}
 \label{sec:investigating_lwt}
 %
 % Research into LWT, how it works and how it should work in relation to OCaml-Java (i.e. scheduling LWT threads since they're teenie weenie)
 %
-LWT is an extensive concurrency suite for OCaml which is based around the idea of lightweight cooperative threads\cite{dimino2012} where cooperative threads manage their own lifecycle as opposed to preemtive threads which are
-controlled externally, e.g. by the operating system. Creating and destroying a thread in LWT are very cheap operations such that the system will create a thread for every system call that is executed. This idea of lightweight threads
-with a small lifetime handles itself well to the way OCaml (and languages within the ML family) work which is allocating new data frequently which have a small lifetime. The OCaml garbage collector is also optimised for this by using
-generational garbage collection techniques to more frequently collect younger data, as data that has survived a garbage collection once or more before is likely to have an extended lifetime.\cite{chailloux2000}
-
-On the other hand, Java threads have a greater creation overhead and as such cannot be used in a similar fashion to the way LWT threads work without detrimental effects to performance. Java's java.util.concurrent implementations avoid
-the creation overheads by utilising thread pools\cite{web:threadpools}. This observation lead me to the implementation decision of creating a thread scheduler which maps LWT threads to Java threads as clearly a 1:1 mapping would
-simply expose great amounts of thread creation overhead, possibly crippling any speedup gains would obtain.
-\\
-\\
+LWT is an extensive concurrency suite for OCaml which is based around the idea of lightweight cooperative threads\cite{dimino2012} where cooperative threads manage their own life cycle as opposed to preemptive threads which are
+controlled externally, e.g. by the operating system. Creating and destroying a thread in LWT are such cheap operations that the system will create a thread for every system call that is executed. This idea of lightweight threads with
+a small lifetime is well suited to the way that OCaml (and languages within the ML family) work which is by allocating new immutable data frequently which tend to have very small lifetimes. The OCaml garbage collector is also
+optimised for this by using generational garbage collection techniques to more frequently collect younger data since data that has survived a garbage collection once or more before is likely to have an extended
+lifetime\cite{chailloux2000}.
+\hfill\\
+\hfill\\
+On the other hand, Java threads have a greater thread creation overhead and as such cannot be used similarly to the way LWT threads are used without detrimental effects to performance. Java's {\tt java.util.concurrent} package avoid
+the thread creation overheads by utilising thread pools instead\cite{web:threadpools}. This observation led me to decide that a good implementation strategy for the interface would be to  create a thread scheduler that maps LWT
+threads to Java threads as a 1:1 mapping would simply expose great amounts of thread creation overhead, possibly crippling any speedup gains parallelism would obtain.
+\hfill\\
+\hfill\\
 %
 % Give some examples of LWT code, how it works, how threads are spawned, joined and bound, the thread queue and how it makes things asynchronous
 %
-There are many functions within LWT to create threads which have various different effects. One of the most commonly used is the {\em bind} function, with the following type:
-\\
+There are many functions within LWT to create threads. One of the most commonly used is the {\tt bind} function, with the following type:
+\hfill\\
 \begin{lstlisting}
 val bind : 'a t -> ('a -> 'b t) -> 'b t
 \end{lstlisting}
 \hfill\\
-Essentially the bind function takes a thread of generic type, a function which takes the return value of the thread, performs some processing returns a new thread. This processing connects the passed thread and function such that when
-the thread has finished executing, the function will be run with the return value from the thread. This acts synonymously to the classic `sync' operation within various writings on parallel processing\cite{cormen2009}. The new thread
-returned by the bind function is the result of the whole bind operation -- that is, once the passed thread has executed and the passed function has returned some value.
-
-Since threds in LWT are cooperative, theres no real notion of spawning, starting or stoping such as in POSIX or Java. Asynchronous execution is achieved by binding some work to a thread which will execute later on. This can be
-achieved with the `Lwt\_main.yeild' function:
-\\
+The bind function constructs a thread from a thread {\tt t} and a function which takes the return value of {\tt t}. After performing some processing, bind returns a new thread. What this processing does is attach the function as `{\em
+waiter}' on the thread. A waiters purpose is to wait until the thread has finished executing, then perform its own execution with the return value of the thread. This serialises the execution of two functions in an asynchronous
+environment and acts synonymously to the classic `sync' operation within various writings on parallel processing\cite{cormen2009}. The thread returned by the bind function will contain the final result of the waiter function once
+everything has finished executing. Until then, the function thread will remain in the {\tt Sleep} state (moving to the {\tt Return 'a} state once execution has completed). The following listing is an extract from the LWT code base
+showing the possible states a thread may exist in:
+\hfill\\
+\lstinputlisting{thread_state.ml}
+\hfill\\
+Since LWT threads are cooperative, there's no real notion of spawning, starting or stopping threads such as in POSIX or Java. Asynchronous execution is achieved by binding some work to a thread which will execute later on. This can be
+achieved with the {\tt Lwt\_main.yield} function:
+\hfill\\
 \begin{lstlisting}
 val yield : unit -> unit Lwt.t
 \end{lstlisting}
 \hfill\\
-The {\em yield} function returns a thread which simply goes to sleep, then wakes up as soon as possible and terminates. This is entirely useless on it's own but binding to this thread will create a situation where you're able to
-schedule something to run in the near future -- without knowing when it will occur.
-\\
-\\
+The {\tt yield} function returns a thread which simply goes to sleep, then wakes up as soon as possible and terminates. This is fairly useless on it's own but binding to this thread will create a situation where you're able to
+schedule something as soon as a processor becomes available (which is the point at which the yield thread is woken up).
+
 \section{Investigating OCaml-Java}
 \label{sec:investigating_ocaml-java}
 %
 % Talk about how OCaml-Java achieves concurrency and parallelism (through the concurrency module)
 %
-Providing the framework to parallel OCaml code in this project, OCaml-Java is a collection of Java programs and libraries that allow you to compile OCaml code to Java bytecode for execution on the JVM; run OCaml bytecode compiled
-software on the JVM using an interpreter written in Java; and access Java libraries directly from within OCaml code using a specially designed interface that maps Java classes to OCaml types. However most relevant to this project is
-OCaml-Java's ability to run OCaml code in parallel using Java threads.
-
+OCaml-Java, which provides the framework for compiling parallel OCaml code in this project, is a collection of Java programs and libraries that allow you to compile OCaml code to Java bytecode for execution on the JVM; run OCaml
+bytecode compiled software on the JVM using an interpreter written in Java; and access Java libraries directly from within OCaml code using a specially designed interface that maps Java classes to OCaml types. However most relevant
+property of OCaml-Java is it's ability to execute OCaml code in parallel using multiple Java threads.
+\hfill\\
+\hfill\\
 %
 % Talk about how the concurrency module works, examples of code (maybe, or just prose), how it works (wrapper around java libraries)
 %
-OCaml-Java provides a concurrency module which contains many standard concurrency features such as Locks, atomic variables and condition variables. The locks, for example, can be manipulated as simply as calling `make\_reentrant' to
-construct a new lock and `lock' and `unlock' to change acquire/release the lock respectively:
-\\
+OCaml-Java provides a concurrency module which contains many standard concurrency features such as locks, atomic variables and condition variables. The locks, for example, can be constructed by calling {\tt make\_reentrant} and
+manipulated by calling {\tt lock} and {\tt unlock} to change acquire/release the lock respectively:
+\hfill\\
 \begin{lstlisting}
 val make_reentrant : bool -> t
 
@@ -353,16 +360,16 @@ val lock : t -> unit
 val unlock : t -> unit
 \end{lstlisting}
 \hfill\\
-Essentially, the concurrency module is just a set of OCaml wrappers around their Java counterparts\cite{web:clerc2013} therefore the OCaml-Java reentrant lock module `Concurrent.Lock' is a wrapper around the Java reentrant lock class
-`java.util.concurrent.locks.ReentrantLock'.
-\\
-\\
+In fact, the concurrency module is just a set of OCaml wrappers around their Java counterparts\cite{web:clerc2013} for example the OCaml-Java reentrant lock module {\tt Concurrent.Lock} is a wrapper around the Java reentrant lock
+class {\tt java.util.concurrent.locks.ReentrantLock}.
+\hfill\\
+\hfill\\
 %
 % Talk about how OCaml provides neat interface between OCaml and Java with the weird type system (java'lang'system type) etc...
 %
-For classes that do not yet have an OCaml wrapper, there is a neat interface which allows direct calls to Java functions and manipulation of Java references, for example object instantiation. Via the Java.make and Java.call functions,
-you are able to instantiate any Java class or call any Java function:
-\\
+For classes that do not yet (and may never) have an OCaml wrapper, there is a neat interface which allows direct calls to Java functions and manipulation of Java references. Via the Java.make and Java.call functions,
+you are able to instantiate any Java class or call any Java function. An example which uses this OCaml-Java interface is given below:
+\hfill\\
 \begin{lstlisting}
 let obj = Java.make "java.lang.Object()"
 let itg = Java.make "java.lang.Integer(int)" 123l
@@ -371,12 +378,13 @@ let obj_hash = Java.call "java.lang.Object.hashCode():int" obj
 let eq = Java.call "java.lang.Object.equals(java.lang.Object):boolean" obj itg
 \end{lstlisting}
 \hfill\\
-The code above gives an example of using the Java.make and Java.call functions. Two Java objects are created named `obj'\todo{don't quote these things, wrap them using texttt} and `itg' using different classes via the Java.make
-function, then their hash values are compared to each other using the Java.call on the hashCode method and the equals method. Whilst the java primitives are easily mapped to OCaml types e.g. a Java int maps directly to an OCaml int32,
-the types of Java objects need to have their own defining types within OCaml. The typing scheme introduced makes a java Object map to an OCaml type `'a java\_instance' where `'a' is a Java class. Classes are denoted within OCaml by
-substituting dots with quotes to abide by the OCaml syntactic rules\cite{web:clerc2013}, therefore the equivalent OCaml type for `java.lang.Object' would be `java'lang'Object java\_instance'.
-\\
-\\
+This code is an example of using the OCaml-Java interface to construct two Java objects named {\tt obj} and {\tt itg} using different classes via the {\tt Java.make} function. Their hash values are compared to each other using {\tt
+Java.call} on the {\tt hashCode} method and the {\tt equals} method.  Whilst the Java primitives are easily mapped to OCaml types -- e.g. a Java {\tt int} maps directly to an OCaml {\tt int32} -- the types of Java objects need to have
+their own defining types within OCaml in order to cooperate appropriately with the OCaml type system. The typing scheme introduced maps a Java Object to an OCaml type {\tt 'a java\_instance} where {\tt 'a} is a Java class.  Classes
+are denoted within OCaml by replacing dots with single quotes to abide by the OCaml syntactic rules\cite{web:clerc2013}, therefore as an example, the equivalent OCaml type for {\tt java.lang.Object} would be {\tt java'lang'Object
+java\_instance}.
+\hfill\\
+\hfill\\
 
 \section{Choice of Tools}
 \label{sec:choice_of_tools}
@@ -386,30 +394,32 @@ substituting dots with quotes to abide by the OCaml syntactic rules\cite{web:cle
 % software engineering techniques involved weekly meetings with supervisors about my progress and my best next step. Working by myself so not neccessary to follow protocols such as Agile Development, but generally had `project days'
 % where I would spend the whole day (or two) solely on project work (meaning there was less start-stop overhead from doing bits every day).
 %
-My project depends entirely on the use of OCaml and Java therefore there is no real decision relating to the programming languages I will use. Furthermore LWT and OCaml-Java are two libraries that I will be depending on throughout the
-development of the project. These invariants aside, the following section outlines my choice of development environment, including version control, backup precautions taken/software used and the development and build methods applied.
+My project depends entirely on the use of OCaml and Java therefore there is no real decision relating to the programming languages I will use. Furthermore the LWT library and OCaml-Java compiler are two projects that I will be
+depending on throughout the development of the project. These invariants aside, the following section outlines my choice of development environment, including version control, backup precautions taken/software used and the development
+and build methods applied.
 
 \subsection{Development Environment}
 \label{subsec:development_environment}
 
 \subsubsection{Software and Systems}
-Unlike Java, OCaml has little in the way of a fully supported IDE. There are addons for IDE's such as Eclipse\footnote{https://www.eclipse.org} which add syntax highlighting and build functions, however most (including my supervisors)
-use a text editor such as Emacs or Vim to develop -- which both come stock with OCaml syntax highlighting. I am already very familiar with Vim, therefore it was a clear choice to use it. I also used Mac OSX as my host operating system
-as I am a mac user, however at since there are little restrictions to what operating oystem OCaml (and in particular Java) can run on therefore I was also able to utilise the Intel Labs PWF machines on occasion which are running
-Ubuntu version something\todo{find pwf facilities version}.
+Unlike Java, OCaml has little in the way of a fully supported integrated development environment (IDE). There are add-ons for IDEs such as Eclipse\footnote{https://www.eclipse.org} which add syntax highlighting and build functions,
+however most (including my supervisors) use a text editor such as Emacs or Vim to develop -- which both come stock with OCaml syntax highlighting. I am already very familiar with Vim, therefore it was a clear choice to use it. I also
+used Mac OSX as my host operating system as I am a mac user, however, since there are little restrictions to what operating system OCaml (and in particular Java) can run on therefore I was also able to utilise the Intel Labs PWF
+machines on occasion which are running Ubuntu.
 
 \subsubsection{Version Control}
-For version control I used Git since I'm already familiar with it and it has always provided me with the neccessary tools I need to work effectively. I also used Github to host my code in the cloud for a few reasons:
+For version control I used Git since I'm already familiar with it and furthermore it has always provided me with the necessary tools I need to work effectively and efficiently. I also used Github to host my code on a remote server for
+a few reasons:
 
 \begin{itemize}
 \item Github provides educational users with free private repositories which I used for this project.
-\item Storing my code on the cloud means that I can easily access it from anywhere with internet access, with all my revisions.
-\item My supervisors are also on Github meaning they are easily able to check my progress.
+\item Storing my code on a remote server means that I can easily access it from anywhere with internet access, with all my revisions.
+\item My supervisors also have accounts on Github meaning they are easily able to check my progress.
 \end{itemize}
 
 \subsubsection{Backup}
 \label{subsubsec:backup}
-In conjunction with Github as my primary backup solution, I also hosted my code on Dropbox in the case I loose work I haven't yet committed. Furthermore I also have mirrors of my Git repository hosted on the PWF facilities which were
+In conjunction with Github as my primary backup solution, I also hosted my code on Dropbox in the case I lose work I haven't yet committed. Furthermore I also have mirrors of my Git repository hosted on the PWF facilities which were
 pushed to frequently.
 
 \section{Summary}
@@ -417,8 +427,8 @@ pushed to frequently.
 %
 % Summary (pretty much a mirror of the introduction to the chapter, tell you what I've just told you)
 %
-Within this chapter I have demonstrated the process of planning and investigation taken in order to prepare for the projects implementation. I have investigated the ways that OCaml and LWT are able to perform asynchronous code
-execution, including the cause for OCaml's limitations in fully parallel code compilation and the differences between LWT and Java's handling of threads. Furthermore I have demonstrated a few tools that OCaml-Java has introduced which
+Within this chapter I have described the process of planning and investigation taken in order to prepare for the projects implementation. I have investigated the ways that OCaml and LWT are able to perform asynchronous code
+execution, including the cause for OCaml's limitations in fully parallel code compilation and the differences between LWT and Java's handling of threads. Furthermore I have demonstrated the tools that OCaml-Java has introduced which
 allow parallel OCaml code to be written and run on the JVM.  Finally I explained that Vim will be my choice of IDE, running on Mac OSX; Git and Github will be used for version control and in addition the PWF facilities and Dropbox
 will be used for backup.
 
@@ -457,7 +467,7 @@ will be used for backup.
 %       The way LWT is written means that threads are incomplete when they're placed onto the yield queue, meaning that a thread may begin executing an incomplete thread.
 %       Solution to this problem was to associate a lock with each thread so that only one worker thread may be accessing a thread at a time.
 %       When a thread is constructed it is locked initially since it may be incomplete. This is always true for a yield thread since all it does is sleep and re-awaken (which is useless without some waiters hanging on it).
-%       Once some waiters have been bound to this yeild thread, a callback is run to unlock the thread, allowing a worker thread to now pick it up and begin execution on it.
+%       Once some waiters have been bound to this yield thread, a callback is run to unlock the thread, allowing a worker thread to now pick it up and begin execution on it.
 %       LWT uses a lot of unusual OCaml code for instance the %identity function which allows explicit type casting from any two types.
 %           Clearly defeats the point of type safety in OCaml. It is used to destinguish between a thread type `t', wakener type `u' and a thread_repr type.
 %           Thread_repr type may be a chain of thread_repr's with the actual thread type at the bottom of the chain - with pointers to any section of the thread.
@@ -645,7 +655,7 @@ waiters now attached. Finally the garbage collector picks up the yield thread wh
 Although the gap between where this race condition occurs within the code is relatively small, the problem occurs suprisingly frequently. To overcome this issue, it was neccessary to lock the yield thread between the point of creation
 and the end of the bind. However this fix makes an assumption on how the yield thread is used -- it suggests that a yield thread will only ever be used in conjunction with a call to bind. While this isn't strictly true, since a yield
 thread is a fully qualified thread on its own that simply does nothing, justification to this assumption is that -- to my understanding -- it is only ever sensibly used in conjunction with bind. To create a yield thread which sleeps
-and wakes with no functions to run upon termination is -- useless. Furthermore the only way to achieve some kind of useful processing with a yeild thread is to attach a waiter function which will run when the thread terminates.
+and wakes with no functions to run upon termination is -- useless. Furthermore the only way to achieve some kind of useful processing with a yield thread is to attach a waiter function which will run when the thread terminates.
 
 To lock and unlock the yield thread separated accross two functions, I used an additional thread value containing an option for a bind callback. A thread using bind which requires post bind processing can fill this option value with
 a function that performs the appropriate post-processing. Bind, upon completing its binding operation, will then execute the callback if it exists, finishing off the thread processing appropriately. Using this new bind callback, the

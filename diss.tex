@@ -326,7 +326,7 @@ environment and acts synonymously to the classic `sync' operation within various
 everything has finished executing. Until then, the function thread will remain in the {\tt Sleep} state (moving to the {\tt Return 'a} state once execution has completed). The following listing is an extract from the LWT code base
 showing the possible states a thread may exist in:
 \hfill\\
-\lstinputlisting{thread_state.ml}
+\lstinputlisting[caption={Thread state type}]{thread_state.ml}
 \hfill\\
 The threads are pretty well commented within the code, however for brevity:
 \begin{description}
@@ -532,7 +532,8 @@ yield threads (mentioned in section~\ref{sec:investigating_lwt}) in a queue whic
 lightweight thread and
 continuously polls this passed thread for completion (i.e. the thread state is {\tt Return a} for some {\tt a}). If the lightweight thread has not yet returned a value, the algorithm iterates through the yield queue, executing all the threads contained within it
 until it reaches the top of the queue. The algorithm then re-polls the passed thread for completion again, and cycles through the process of executing threads on the yield queue and polling for completion until a value is returned. 
-
+\hfill\\
+\hfill\\
 The functions to be executed by the worker threads will most likely add more lightweight threads to the yield queue. These threads are added to the bottom of the queue and are not executed until the next polling iteration.
 Figure~\ref{fig:yield_queue} describes the functionality of the yield queue graphically.
 \begin{figure}[h!]
@@ -565,7 +566,7 @@ particular code and then adds another lightweight thread to the yield queue, mak
 thread is printed out. There is a race between the worker threads as to which one picks up the yield thread, therefore the output from running this program may be different each time, demonstrating non-deterministic program
 behaviour.
 \hfill\\
-\lstinputlisting[label={lst:async_example}]{async_example.ml}
+\lstinputlisting[label={lst:async_example},caption={Asynchronous Worker Thread example code}]{async_example.ml}
 \hfill\\
 With the overview of the idea for implementing parallel thread execution in LWT, my approach took two main paths: a naive approach of using a single global lock and a coarse grained locking approach. I decided upon these two strategies
 because I considered the first approach to be a relatively straight forward way of getting a result from the project whilst also giving insight into potential problems. The second approach was partly based on the concurrency options
@@ -592,7 +593,8 @@ foundation for a more efficient method to be implemented.
 %
 Substituting a single global lock for a coarse grained locking implementation allows the project to take advantage of the parallelism exposed by OCaml-Java. The aim of the coarse grained lock is
 to prevent the unnecessary blocking of threads demonstrated in the single global lock approach, by keeping all the worker threads busy via an appropriate scheduler.
-
+\hfill\\
+\hfill\\
 %
 % Talk about LWT's mutable state and how this lead to a lock per thread
 %
@@ -652,7 +654,8 @@ chain. The links between thread\_repr objects always create a directed acyclic g
 %
 Some aspects of how LWT handles threads did not directly map well to a parallel implementation of the interface. In some cases this meant that special care was taken to handle events in an appropriate manner. One notable example
 of this is a race condition between lightweight threads being placed on and taken off the yield queue before being appropriately initialised.
-
+\hfill\\
+\hfill\\
 A visual description of the problem is outline in figure~\ref{fig:bind_callback}.
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{bind_callback}
@@ -671,7 +674,8 @@ attached.}
 The problem occurs when attempting to bind a lightweight thread to a yield thread so that it may be run asynchronously. The yield function adds a thread onto the yield queue instantly without the waiters being added to a waiter list. This means
 that any worker thread is able to remove the yield thread from the queue and run it. At the point the bind has added a waiter function to the waiter list, the yield thread has finished executing and will therefore never run the
 waiters now attached. Finally the garbage collector picks up the yield thread which has finished and it is never to be seen again. 
-
+\hfill\\
+\hfill\\
 %
 % Talk about how this was overcome using bind callback
 %
@@ -679,13 +683,13 @@ Although the section of code where this race condition occurs is relatively smal
 and the end of the bind. However this fix makes an assumption on how the yield thread is used -- it suggests that a yield thread will only ever be used in conjunction with a call to bind. While this isn't strictly true, since a yield
 thread is a fully qualified lightweight thread on its own that simply does nothing, justification to this assumption is that -- to my understanding -- it is only ever sensibly used in conjunction with bind. To create a yield thread which sleeps
 and wakes with no functions to run upon termination is -- useless. Furthermore the only way to achieve some kind of useful processing with a yield thread is to attach a waiter function which will run when the thread terminates.
-
+\hfill\\
+\hfill\\
 To lock and unlock the yield thread separated across two functions, I used an additional thread value containing a possibly empty slot for a bind callback. A thread using bind which requires post-bind processing can fill this slot value with
 a function that performs the appropriate post-processing. Bind, upon completing its binding operation, will then execute the callback if it exists, finishing off the thread processing appropriately. Using this new bind callback, the
 call to yield first locks the yield thread before creation and adds a bind callback function which unlocks the yield thread. In this state, no worker threads will remove a lightweight thread on the yield queue which is currently locked (a requirement
 for removing a thread from the yield queue is that the worker thread is able to acquire the thread lock). Once the bind operation has completed on the yield thread, the callback is run which unlocks the thread, allowing it to be
 picked up by a worker thread to begin execution.
-
 %
 % Special care was taken with the callbacks which could be potentially accessed by many threads simultaneously. Data had to be made atomic, some converted to thread local variables, etc.
 %
@@ -723,7 +727,8 @@ code is given for exactly that purpose. Listing~\ref{lst:timer} shows some of th
 \hfill\\
 To utilise Java functions and references directly through OCaml, I used the OCaml-Java interface described in section~\ref{sec:investigating_ocaml-java}. There is no documentation on the speed of executing Java functions via the interface in
 comparison to direct calls, therefore it is possible that the interface will introduce some additional overheads, however they did not interfere with the results of the project as demonstrated in chapter~\ref{chap:evaluation}.
-
+\hfill\\
+\hfill\\
 %
 % Wrote mergesort benchmark (again, example code and how it would run in the system)
 %
@@ -732,7 +737,8 @@ benchmarks. One of their benchmarks is an integer sort algorithm based on the Ci
 and an insertion sort at the sequential level, where sequential sorting is triggered by reaching a sub array size below a particular threshold. Furthermore the classic Introductions to Algorithms book \cite{cormen2009} uses merge sort
 as an introduction to parallel algorithms. Therefore the most sensible choice for parallel benchmarking was the parallel merge sort algorithm due to its use in use in professional parallel benchmarking suites and major texts. The merge sort algorithm
 I implemented in OCaml is a mirror of the Cilk algorithm with the exception that the insertion sort in Cilk has been replaced with a simple call to OCaml's default array sorting algorithm {\tt Array.sort}.
-
+\hfill\\
+\hfill\\
 The merge sort algorithm within the system will continuously add merge sort commands for sub arrays onto the yield queue, where each sub array is half the size of its originating array. This will continue until a sub array
 drops below the linear sort threshold, at which point OCaml's default array sorting algorithm is called on the sub array. The threads are taken off the yield queue and executed on multiple worker threads as explained in
 section~\ref{sec:parallelism_overview}.
@@ -804,12 +810,14 @@ commands from OCamlbuild and output them to a custom build script, which perform
 OCaml programs. Findlib outputs commands which contain all the relevant switches and linked files to compile a piece of OCaml software correctly, therefore by intercepting these commands and replacing them in the build script, I
 can remove Findlib and OCamlbuild support entirely. Furthermore LWT also uses the CamlP4 processor to provide many very useful shorthands when writing asynchronous LWT code. However there are a few bugs with the OCaml-Java Camlp4
 system, therefore these files can be manually preprocessed using the default Camlp4 preprocessor which will produce the same output.
-
+\hfill\\
+\hfill\\
 The second stage involves filtering out foreign function calls that will not run under the JVM. Examples of these commands are calls to system semaphores and mutexes, file manipulation commands and more, as they are all mostly system
 dependent. OCaml-Java does not support any foreign function calls written in C/C++, in fact it expects these external command calls to link to Java functions, existing in Java class files. Removing these external function calls from the
 OCaml code can be most easily done by replacing the calls with exceptions of the same command name -- done with a sed script. This with both allow the code to compile and also make the third stage of the I/O interface creation process
 much simpler.
-
+\hfill\\
+\hfill\\
 The third stage involves actually converting the external C/C++ commands into Java code so that it may be executed with (roughly) the same effect as it's C/C++ counterparts. At this stage of the conversion process, the LWT code
 should be compiling, however no I/O should yet be working but rather should be terminating with exceptions at the external calls. Depending on what code that I would like to have working first, I would begin with a test LWT program that
 utilises I/O, compile it and follow the exceptions, implementing each function until the software executes without fail. The idea is that this would create sections working I/O so that results may be seen sooner than later. An alternative
@@ -906,9 +914,8 @@ section of the array from its sibling's recursive call. This means that (assumin
 and therefore they may run without stalling each other or requiring special locks. Furthermore, the Cilk benchmark which this current merge sort implementation is based on performs a linear sort when the array size drops below a
 certain threshold. By adjusting this value appropriately we are able to achieve the best performance gains by allowing LWT threads to perform large chunks of processing and less thread management. The pseudo code for the merge sort
 algorithm is provided below:
-
-Don't forget to describe the merge sort algorithm here!\todo{add merge sort pseudo code here}
-
+\hfill\\
+\hfill\\
 Apart from the actual sorting algorithm, there is the situation of creating appropriate arrays for the merge sort algorithm to test and sort. In fact the merge sort is provided a random list of numbers from a range equal to the length
 of the array: that is, an array of length 10 will contain only the numbers 1 -- 10 at random. This made specifying the range of numbers to the OCaml {\tt Random.int} function easier. Furthermore the merge sort algorithm was to
 be run at least twice, once using LWT with no parallelism and one with parallelism, therefore I made copies of the arrays and provided the copies to each function so that they would work on the same, equal data. However the array's
@@ -930,7 +937,8 @@ slower execution time.}
 \end{figure}
 There is a clear, almost linear speedup between using 1 and 8 cores for the sort, reaching up to a maximum speedup of between approximately 3 or 4. However after this point, the graph seems to plateau with a little jitter in between
 successive increments in the number of cores.
-
+\hfill\\
+\hfill\\
 We can first analyse the serial and parallel merge sort algorithms mathematically and then apply this to the outcome of the graph. It is a well known fact that the average running time of merge sort is $\Theta(lg\,{n})$, this can be
 shown by considering the following recurrence relation:
 
@@ -1033,7 +1041,10 @@ both the OCaml-Java compiler and the interface.
 \subsubsection{Thread Scheduling Overhead}
 The last section dealt with understanding the speedup properties of the merge sort algorithm and comparing that to the test results achieved. One important aspect that wasn't taken into account is the overhead caused by the scheduler
 and how much that actually effects the computation time of the merge sort algorithm. We can determine the threading overheads in terms of the execution time of the merge sort by alternating the linear sort limit of the merge sort
-algorithm -- which is the maximum array size that will be sorted on one thread, i.e. linearly. For a smaller linear sort limit, the merge sort algorithm does less computation per core and more lightweight threads are created as there
+algorithm -- which is the maximum array size that will be sorted on one thread, i.e. linearly. 
+\hfill\\
+\hfill\\
+For a smaller linear sort limit, the merge sort algorithm does less computation per core and more lightweight threads are created as there
 are more divisions of the array to be made before the linear sort limit is reached. However at some point we expect the lightweight threads to be sorting significant portions of the array such that the threading overheads are
 negligible. Increasing the linear sort limit again beyond this point will result in a longer execution time as the algorithm will not divide the data up enough to keep all worker threads continuously busy. It is the point at which the
 lightweight thread overheads become equal to the work done by the linear sorts which is important to us. At this point we can divide the execution cost roughly between thread scheduling and linear sort execution times in order to
@@ -1090,7 +1101,8 @@ threading overheads entirely overshadow the potential for speedup.}
 This graph describes the execution time of the Fibonacci algorithm where the x~axis denotes the Fibonacci number being calculated and the y~axis denotes the time taken to calculate that Fibonacci number. The graph clearly shows that
 calculating Fibonacci on multiple cores actually performs worse than using the same recursive algorithm on a single core. This is highly counter intuitive under the assumption that more cores means more power. Although there are many
 more cores executing the Fibonacci calculations, it would seem the overhead of managing many LWT threads is significant enough to completely negate any potential speedup gains from utilising multiple cores.
-
+\hfill\\
+\hfill\\
 %
 % Why? Well its because fib does only an addition operation, therefore most of the processing goes into thread management overheads. made even worse since threads are small and made frequently (although actually I think it's made the
 % same in this case)
@@ -1100,7 +1112,6 @@ perform execution. Within the calculation, the fib thread must bind on the resul
 child threads, such that when they both complete, the closure will be called with their return values and pass the result back up the chain. We discovered in the last section that the average running time for all these steps is
 roughly 0.11 ms which is a relatively significant amount of time. Furthermore all these extra steps are produced to simply perform a single addition operation which means the majority of the processing done on the worker thread is the
 thread management rather than the algorithm processing.
-
 % \subsubsection{Speedup}
 % \todo{May remove this graph as I can't explain why more cores is worse even if parallelism isn't exploited, it should at least be the same...}
 % The speedup graph also shows poor results using the current interface scheduling technique, which is shown in figure~\ref{fig:fib_speedup_graph}.
@@ -1126,6 +1137,8 @@ thread management rather than the algorithm processing.
 % Possible ways of improving the result is to reduce the threading overhead somehow, perhaps by assigning processors to subtrees of the Fibonacci calculation until every processor is in use, then allow them to calculate the rest of
 % the sub tree. That would involve using a different scheduling technique which was of course part of my extended options if time allowed.
 %
+\hfill\\
+\hfill\\
 Overall the Fibonacci calculation has not scaled well with the current implementation of the interface, unlike the merge sort. However it may be possible to achieve better performance gains by using a different scheduling technique
 than the one currently in use. Furthermore the current implementation of the parallel Fibonacci continues to recurse until it reaches $fib(0)$ or $fib(1)$, by limiting the recursion depth of the Fibonacci algorithm in a similar
 fashion to the linear sort limit of the merge sort algorithm, we can combine more processing potential into a single lightweight thread and definitely achieve better results.
@@ -1135,7 +1148,8 @@ Within this chapter, I discussed how the merge sort algorithm was tested and als
 multiple cores and execute parallel LWT code with appropriate speedup gains, achieving a speedup of 3 -- 4 in comparison to a normal Java merge sort algorithm which achieved a speedup of 5 -- 5.5 with the same test parameters. The
 reason to the graph shape was proven as the theoretical speedup of the merge sort algorithm and was observed in both the interface parallel merge sort and the normal Java merge sort results. We also used the variation of the linear
 sort limit to determine the approximate thread management overhead of the lightweight threads, which resulted in 0.11 ms -- a good result considering OCaml-Java's approximately 33\% reduction in execution speed.
-
+\hfill\\
+\hfill\\
 The parallel Fibonacci algorithm provided somewhat different results as we discovered the recursive Fibonacci algorithm mainly exposed thread overhead times since the algorithm continues to recurse until it reaches $fib(0)$ or
 $fib(1)$. However we determined that setting a recursion limit would move the majority of the processing time from thread management to algorithm execution in a similar way to the linear sort limit in the merge sort algorithm.
 
@@ -1157,7 +1171,8 @@ large OCaml code base with only little prior knowledge of ML was a feat I under 
 focus in learning ML was put on developing algorithms and data structures, whereas OCaml's Core library contains most of these algorithms and has an emphasis on using them instead. Furthermore in languages like C++ and Java there are
 structured and tested ways of producing systems with low coupling and high cohesion via object oriented programming techniques and design patterns, however in OCaml you can choose to use the modular system, the object system, neither
 or a mixture of both\cite{chailloux2000}. 
-
+\hfill\\
+\hfill\\
 That being said, I've learnt a lot of important lessons about developing functional code and also project management. One of the main problems I had with this project was biting off more than I could chew. At times within LWT there
 was very high coupling between modules and I found myself attempting to juggle developing and converting code from many different locations in code at the same time in an attempt to keep the entire system working. Inevitably it served
 me better to attempt to reduce coupling as much as possible and focus on core sections of the code base, rather than as a whole. At times it was also characteristic of me to become `lost in the code', where I would be thinking of many
@@ -1207,16 +1222,16 @@ The following appendix contains relevant code samples which have been referred t
 \section{Recursive Parallel Fibonacci Implementation (fib.ml)}
 The recursive Fibonacci algorithm was implemented 3 times in different ways in order to compare the normal, asynchronous and parallel versions for execution time, speedup and other relevant measurements. The following code listing
 shows each of these versions.
-\lstinputlisting[frame=none]{fib.ml}
+\lstinputlisting[frame=none,caption={Fibonacci code}]{fib.ml}
 
 \section{Parallel Merge Sort Implementation (msort.ml)}
 Similar to the Fibonacci implementation, the merge sort was also written in three different ways.
-\lstinputlisting[frame=none]{msort.ml}
+\lstinputlisting[frame=none,caption={Merge Sort code}]{msort.ml}
 
 \section{Worker Thread}
 The following code runs on each Java worker thread and processes lightweight threads until interrupted, this loop is relatively small in order to try and keep the bulk of the processing in the lightweight thread rather than the thread
 management overheads.
-\lstinputlisting[frame=none]{worker.ml}
+\lstinputlisting[frame=none,caption={Worker Thread code}]{worker.ml}
 
 \chapter{Project Proposal}
 \label{chap:proposal}

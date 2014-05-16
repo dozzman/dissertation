@@ -326,6 +326,22 @@ showing the possible states a thread may exist in:
 \hfill\\
 \lstinputlisting{thread_state.ml}
 \hfill\\
+The threads are pretty well commented within the code, however for brevity:
+\begin{description}
+\item[{\tt Return}]\hfill\\
+This state contains the returned value of thread. The return value is the result of the thread completing its execution successfully and terminating.
+\item[{\tt Fail}]\hfill\\
+The {\tt Fail} state occurs when an uncaught exception is thrown from within the threads execution. The exception is wrapped around this {\tt Fail} variant type so that another thread of execution may determine the appropriate next steps when
+dealing with this failed thread.
+\item[{\tt Sleep}]\hfill\\
+{\tt Sleep} contains the {\tt sleeper} type which holds all the main functionality of a thread. The {\tt waiters} mutable state contains a list of all the functions that will be run when this thread is executed -- it is the execution
+body of the thread. There is also state containing data which helps to cancel a thread, etc.
+\item[{\tt Repr}]\hfill\\
+The {\tt Repr} state just holds the {\tt thread\_repr} type which is actually an indirection of a {\tt thread\_state}. Looking at the {\tt thread\_repr} type we can see that it simply holds another {\tt thread\_state} reference, which
+can be any of the above {\tt Return, Fail, Sleep} or {\tt Repr} variants. This allows chains of {\tt thread\_repr} objects pointing to a {\tt Return, Fail} or {\tt Sleep} thread at the end of the chain. This was an interesting problem
+to deal with whilst dealing with implementation discussed in \ref{subsubsec:lock_sharing}.
+\end{description}
+\hfill\\
 Since LWT threads are cooperative, there's no real notion of spawning, starting or stopping threads such as in POSIX or Java. Asynchronous execution is achieved by binding some work to a thread which will execute later on. This can be
 achieved with the {\tt Lwt\_main.yield} function:
 \hfill\\
@@ -488,19 +504,19 @@ will be used for backup.
 % talk about requirements you gave in preparation chapter
 %
 
-In this chapter, I outlined the main directions and considerations taken towards developing the asynchronous framework for LWT on OCaml-Java. These are outlined as follows:
+In this chapter, I outline the main directions and considerations taken towards developing the asynchronous framework for LWT on OCaml-Java. These are outlined as follows:
 \begin{enumerate}
-\item {\em Runtime Lock Approach} \hfill \\
-Designed as a penultimate stage to full parallelism with LWT on OCaml-Java, the runtime lock approach manages to achieve full cooperation between OCaml-Java and LWT without exploiting parallelism by concentrating on getting the core
-LWT modules to compile and execute code successfully on the JVM. By wrapping the core LWT functionality within a runtime lock I was able to concerntrate on attempting to get LWT and OCaml-Java cooperating without the overheads of
-thread safety and parallelism.
+\item {\em Single Global Lock Approach} \hfill \\
+A single global lock is required to be held by any one worker thread (described below) that needs to execute a {\em lightweight thread}. This means that only one worker thread may be executing a lightweight thread at a time -- the other
+threads are blocked and waiting on this lock. Whilst this method doesn't fully exploit parallelism, it provides a stepping stone in the process of constructing the worker threads and locking logic required for full parallel processing
+in addition to providing an earlier stage to see and record results.
 \item {\em Coarse Grained Approach} \hfill \\
-This section extends the basic functionality of the runtime lock approach to multiple cores by introducing java worker threads. These threads are assigned LWT threads to work on continuously until the entireity of the calculation has
-completed. Another very important consideration is to ensure that the worker threads are able to cooperate correctly with each other such that each LWT thread may run in isolation, as if it were running in it's native single core,
-asynchronous environment. Some ways that LWT is written (correctly) assume that it will be running on a single processor, resulting in the half-baked thread problem outlined below. Therefore I needed to take these assumptions into
+This section extends the basic functionality of the runtime lock approach to multiple cores by introducing Java {\em worker threads}. These threads are assigned lightweight threads to work on continuously until the entire program has
+completed. Another very important consideration is to ensure that the worker threads are able to cooperate correctly with each other such that each lightweight thread may run in isolation, as if it were running in its native single core,
+asynchronous environment. In some ways that LWT is written assume (correctly) that it will be running on a single processor, resulting in the half-baked thread problem outlined below. Therefore I needed to take these assumptions into
 account whilst constructing the parallel system.
 \item {\em Profiling} \hfill \\
-Profiling the performance gains from introducing parallel computation involved choosing appropriate benchmarks and implementing them in an LWT and OCaml-Java compatible manor. Ultimately merge sort and recursive fibonacci were
+Profiling the performance gains from introducing parallel computation involved choosing appropriate benchmarks and implementing them in an LWT and OCaml-Java compatible manner. Ultimately merge sort and recursive Fibonacci were
 implemented to utilise multiple processors, and this section details the design decisions and their functionality within the system.
 \end{enumerate}
 
@@ -509,12 +525,13 @@ implemented to utilise multiple processors, and this section details the design 
 %
 % Describe how LWT uses thread queue to produce asynchronous requests  
 %
-The structure that LWT follows in order to create an asynchronous framework ultimately determined what the neccessary steps were for me in implementing the LWT -- OCaml-Java interface. LWT achieves asynchronous execution by storing
-yielded threads (mentioned in section~\ref{sec:investigating_lwt}) in an queue which will be referred to as the `yield queue' from this point onwards. The function Lwt\_main.run runs an algorithm which takes an initial thread and
-continuously polls this passed thread for completion (at which point b value has been returned). if the thread has not yet returned a value, the algorithm iterates through the yield queue, executing all the threads contained within it
+The structure that LWT follows in order to create an asynchronous framework ultimately determined what the necessary steps were in implementing the LWT -- OCaml-Java interface. LWT achieves asynchronous execution by storing
+yield threads (mentioned in section~\ref{sec:investigating_lwt}) in a queue which will be referred to as the {\em yield queue} from this point onwards. The function {\tt Lwt\_main.run} runs an algorithm which takes an initial
+lightweight thread and
+continuously polls this passed thread for completion (i.e. the thread state is {\tt Return a} for some {\tt a}). If the lightweight thread has not yet returned a value, the algorithm iterates through the yield queue, executing all the threads contained within it
 until it reaches the top of the queue. The algorithm then re-polls the passed thread for completion again, and cycles through the process of executing threads on the yield queue and polling for completion until a value is returned. 
 
-The functions to be executed by the yield threads will most likely add more threads to the yield queue. These threads are added to the bottom of the queue and are not executed until the next polling iteration.
+The functions to be executed by the worker threads will most likely add more lightweight threads to the yield queue. These threads are added to the bottom of the queue and are not executed until the next polling iteration.
 Figure~\ref{fig:yield_queue} describes the functionality of the yield queue graphically.
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{yield_queue}
@@ -526,39 +543,43 @@ queue.}
 %
 % Describe how this was translated to run things in parallel with worker threads
 %
-My approach to parallelising this model was to mimic the functionality of the Lwt\_main.run function accross many Java threads using OCaml-Java. These OCaml-Java threads are known as `worker threads', which perform the process of
-taking threads off the yield queue and executing them. Listing blablabla\todo{find out how to reference listings} summarises the behaviour of a worker thread. Initially the OCaml thread (that is, the first thread executing the main
-OCaml code) calls Lwt\_main.run with an initial (passed) thread to execute -- just as normal. However the function now spawns multiple worker threads (dependant on the number of physical threads the system has available) which are set
-to continually run LWT threads on the yield queue until interrupted. The OCaml thread begins work on the passed thread which will inevitably spawn other threads to be pushed onto the yield queue. Once the initial thread has finished
-work and is waiting on the spawned threads to complete, the OCaml thread will continuously poll the passed thread for a return value. Once this return value has been received, the OCaml thread sends an interrupt signal to all the
-other worker threads in order to stop processing yield threads and terminate execution.  It is interesting to note that the OCaml thread is governing the other Java threads in a preemptive style whereas (as mentioned in
-section~\ref{sec:investigating_lwt}), LWT threads are cooperative -- there were no problems working with the two threading ideas together.
-
+My approach to creating a parallel model of the yield queue was to mimic the functionality of the {\tt Lwt\_main.run} function across many Java worker threads using OCaml-Java. These worker threads perform the process of
+taking threads off the yield queue and executing them. Listing~\ref{lst:worker_thread} summarises the behaviour of a worker thread. Initially the OCaml thread (that is, the first thread executing the main
+OCaml code) calls {\tt Lwt\_main.run} with an initial (passed) lightweight thread to execute. This function now spawns multiple worker threads (dependant on the number of physical threads the system has available) which are set
+to continually run lightweight threads on the yield queue until interrupted. The OCaml thread begins work on the passed thread which will inevitably spawn other lightweight threads to be pushed onto the yield queue. Once the initial
+passed lightweight thread has finished work and is waiting on the spawned lightweight threads to complete, the OCaml thread will continuously poll the passed thread for a return value. Once this return value has been received, the OCaml thread
+sends an interrupt signal to all the other worker threads in order to stop processing yield threads and terminate execution.  It is interesting to note that the OCaml thread is governing the other Java threads in a preemptive style
+whereas (as mentioned in section~\ref{sec:investigating_lwt}), LWT threads are cooperative -- there were no problems working with the two threading ideas together.
+\hfill\\
+\lstinputlisting[caption={Worker thread code},label={lst:worker_thread}]{worker.ml}
+\hfill\\
 %
 % Re-describe how yield threads just sleep then wake up. What they execute is whatever is waiting in their waiter list, where a waiter is given by `this datatype'. 
 %
-As an example, listing blablabla\todo{insert that code i wrote just now in here soon} is code that when run, simply outputs what thread it is running on. It does this 20 times before quitting, leaving a trace of all the threads that
-were executing at that time. The inital passed thread is executed which spawns a yield thread that is placed onto the yield queue, furthermore another function (the waiter function) is bound to the yield thread such that when the
-thread is awoken and terminates, the function that was bound is then called with the return value of the yield thread. This function simply prints out what thread is currently running this particular code and then adds another thread
-to the yield queue, making itself the waiter function. This causes a continuous cycle where threads are added to the yield queue, taken off by some worker thread, and the name of the worker thread is printed out. There is a race
-between the worker threads as to which one picks up the yield thread, therefore the output from running this program is different each time, demonstrating real parallel asynchonous execution.\todo{this is slightly misleading, might
-just remove it}
-
-With the overview of the idea for implementing parallel thread execution in LWT, my approach took two main paths: a naive approach of using a runtime lock and a coarse grained locking approach. I decided upon these two strategies
-because considered the first approach to be a relatively straight forward way of getting a result from the project whilst also giving insight into potential problems. The second approach was partly based on the concurrency options
-that OCaml-Java provided for use: OCaml-Java provides reentrant locks and semaphores amongst the atomic variables within the concurrency module, although I had initally decided to use semaphores with integer values based around the
-number of threads currently on the queue, as long as there is code running, there will be threads on the yield queue because every call in LWT results in a thread. Implementing semaphores would cause more overheads with little
+As an example, listing~\ref{lst:async_example} is code that when run, simply outputs what thread it is running on. It does this 20 times before quitting, leaving a trace of all the threads that
+were executing at that time. The initial lightweight thread passed to {\tt Lwt\_main.run} is executed which spawns a lightweight thread that is placed onto the yield queue, furthermore another function (the waiter function) is bound
+to the lightweight thread such that when the thread is awoken and terminates, the function that was bound is then called with the return value of the lightweight thread. This function simply prints out what thread is currently running this
+particular code and then adds another lightweight thread to the yield queue, making itself the waiter function. This causes a continuous cycle where lightweight threads are added to the yield queue, taken off by some worker thread, and the name of the worker
+thread is printed out. There is a race between the worker threads as to which one picks up the yield thread, therefore the output from running this program may be different each time, demonstrating non-deterministic program
+behaviour.
+\hfill\\
+\lstinputlisting[label={lst:async_example}]{async_example.ml}
+\hfill\\
+With the overview of the idea for implementing parallel thread execution in LWT, my approach took two main paths: a naive approach of using a single global lock and a coarse grained locking approach. I decided upon these two strategies
+because I considered the first approach to be a relatively straight forward way of getting a result from the project whilst also giving insight into potential problems. The second approach was partly based on the concurrency options
+that OCaml-Java provided: OCaml-Java provides reentrant locks and semaphores amongst the atomic variables within the concurrency module. Although I had initially decided to use semaphores with integer values based around the
+number of threads currently on the queue, as long as there is code running there will be threads on the yield queue because every call in LWT results in a thread. Implementing semaphores would cause more overheads with little
 returns, therefore a simple locking scheme was a more sensible idea in this respect.
 
-\subsection{Naive Runtime Lock Approach}
+\subsection{Single Global Lock Approach}
 \label{subsec:naive_runtime_lock_apprach}
 %
 % Discuss implementation that went into the naive runtime lock approach
 %
-This approach involved having all threads require the `global runtime lock' before attempting to pull anything off the yield queue. The lock is also held all whilst the thread is being processed and is only released when all
-processing has been finished and the worker thread is about to enter its next iteration of work. All other threads are blocked, waiting on the runtime lock. This method, although running in truly in parallel (i.e. many threads
-performing processing at a time), loses any performance gains from it -- in fact it has introduced the overhead of now requiring a lock to be held before every thread is executed.  However this approach has created a foundation for a
-more efficient method to be implemented.
+This approach involved having all worker threads require the `global runtime lock' before attempting to pull anything off the yield queue. The lock is also held whilst the lightweight thread is being processed and is only released when all
+processing has been finished and the worker thread is about to enter its next iteration of work. All other threads are blocked, waiting on the runtime lock. Although each of the worker threads at this point are running on separate
+cores, there is only ever one thread actually running at a time. Furthermore there is now an additional (although minimal) overhead of acquiring the single global lock before execution can proceed. However this approach has created a
+foundation for a more efficient method to be implemented.
 %
 % Maybe a summary of this subsection
 %
@@ -567,20 +588,15 @@ more efficient method to be implemented.
 %
 % Discuss implementation that went into the coarse grained locking approach
 %
-Sustituting a global runtime lock for a coarse grained locking implementation allows the project to take full advantage\todo{`full' or `more'?} advantage of the parallelism exposed by OCaml-Java. The aim of the coarse grained lock is
-to achieve the following requirements over the global runtime lock:
+Substituting a single global lock for a coarse grained locking implementation allows the project to take advantage of the parallelism exposed by OCaml-Java. The aim of the coarse grained lock is
+to prevent the unnecessary blocking of threads demonstrated in the single global lock approach, by keeping all the worker threads busy via an appropriate scheduler.
 
-\begin{enumerate}
-\item The system should prevent unneccessary blocking of threads as much as possible.
-\item The system should allow atomic access to shared and mutable data
-\item The locks should do something more\todo{rule of three, need one more here}
-\end{enumerate}
 %
 % Talk about LWT's mutable state and how this lead to a lock per thread
 %
-Threads in LWT have mutable state, consider a thread state going from `Sleep' with no data to `Return' which lets anything accessing the thread that the thread has finished executing and has returned its value. It is neccessary for
-the old `Sleep' thread state to be removed (and collected by the garbage collector) and the `Return' state to be created so the value can be accessed. Therefore the locking mechanism requires that only one worker thread may be
-accessing a state at a time to ensure atomic access to the mutable state data (so as to conform to requirement~1). Furthermore, since each thread may have only one state, the best decision was to associate a lock with each thread
+Lightweight threads in LWT have mutable state. Consider a lightweight thread state going from {\tt Sleep} with no data to {\tt Return} which lets anything accessing the thread know that the thread has finished executing and has returned its value. It is necessary for
+the old {\tt Sleep} thread state to be removed (and collected by the garbage collector) and the {\tt Return} state to be created so the value can be accessed. Therefore the locking mechanism requires that only one worker thread may be
+accessing a state at a time to ensure atomic access to the mutable state data. Furthermore, since each lightweight thread may have only one state, the best decision was to associate a lock with each thread
 which is to be acquired by all functions that access the thread. 
 
 %
@@ -588,26 +604,31 @@ which is to be acquired by all functions that access the thread.
 %
 \subsubsection{Lock Sharing}
 \label{subsubsec:lock_sharing}
-Threads in LWT take a further unusual form of `thread\_repr' which are thread indirection types. They provide mutable references to threads (which OCaml does provide, however this is a wrapper around this functionality) -- but
-ultimately it serves as a method of performing type abstraction to ensure all variations of threads can be thought of as some form of `thread representation/thread\_repr'. An interesting result of this is that there may be many layers
-of redirection within a reference to a thread -- as depicted by figure~\ref{fig:thread_repr}\todo{write a proper caption}.
-\begin{figure}[h!]
-\includegraphics[width=\linewidth]{thread_repr}
-\caption{The diagram shows an example of an LWT thread at the bottom of a chain of thread\_repr objects. The letters to the right of each thread\_repr object and the LWT thread is a reference to the object from within memory. There
-may be access at any point within the chain during execution, therefore it is important for every thread\_repr object to share the same lock -- to prevent two worker threads using the same LWT thread from different points in the
-chain.}
-\label{fig:thread_repr}
-\end{figure}
-Therefore it is important to ensure the behaviour of a thread lock is consistent and sensible when dealing
-with this layering. In deciding what the best approach for applying the thread locks in this situation, I had two methods to choose between:
+As briefly mentioned in section~\ref{sec:investigating_lwt}, lightweight threads can have the type {\tt thread\_repr}. This type contains only a reference to another thread which in turn could be a {\tt thread\_repr} type, which results in a
+chain of {\tt thread\_repr} objects linking together until some other thread type terminates this chain. At each point in the chain, there may exist some reference to that point from another function or closure,
+figure~\ref{fig:thread_repr} depicts an possible {\tt thread\_repr} chain in memory. Although each of these {\tt threadi\_repr} objects are distinct from each other, they all refer to the same base thread object at the bottom of the
+chain, whether it be a {\tt Return} or {\tt Sleep}, etc. Therefore it is important to ensure the way the thread locks are used deals with this layering appropriately. In deciding what the best approach for implementing thread locks in
+this situation, I came up with the two following methods:
 
 \begin{enumerate}
 \item Apply a different lock at each individual level, ensuring all locks are acquired and released at all levels below the current `thread\_repr' level before manipulating the thread data.
 \item Have a lock at the lowest level only and ensure this is shared correctly between all other layers.
 \end{enumerate}
 
-I decided to go with the second option and share the lock between many levels of the thread\_repr chain. This seemed like the cleanest option, adding little overhead to the locking process and moving it to the slightly more infrequent
-thread creation functions.
+With method 1, it would be fairly easy to implement the lightweight thread locks as you would simply make a new lock for each {\tt thread\_repr} object, and apply a recursive lock down and throughout the chain. If another worker thread
+wishes to use the lightweight thread, they will begin to lock at some point within the chain but then reach a lock which they couldn't acquire. At this point the worker thread could either release its locks and perform some other
+useful processing or block on the locked thread.
+
+Method 2 would is also relatively easy to implement but would require sifting through the various LWT ensuring that locks remain connected to their appropriate threads when dealing with mutable state, etc. However sharing the lock
+means only one lock operation would need to be performed at any level in the chain which is much more efficient than method 1. For this reason I chose method 2.
+
+\begin{figure}[h!]
+\includegraphics[width=\linewidth]{thread_repr}
+\caption{The diagram shows an example of an lightweight thread at the bottom of a chain of thread\_repr objects. The letters to the right of each thread\_repr object and the lightweight thread is a reference to the object from within the program. There
+may be access at any point within the chain during execution, therefore it is important for every thread\_repr object to share the same lock -- to prevent two worker threads using the same lightweight thread from different points in the
+chain. The links between thread\_repr objects always create a directed acyclic graph which is why locking method 1 will always cross a lock which has been acquired if any locks have been.}
+\label{fig:thread_repr}
+\end{figure}
 
 %
 % Other design decisions made/interesing things implemented? take_first_r? no...
@@ -627,17 +648,17 @@ thread creation functions.
 %
 % Discuss race condition at `half-baked' threads being taken off the thread queue (lwt_main.yielded puts it straight on the queue with no waiters, thread run empty, waiters added at end of thread run, thread is garbage collected)
 %
-Some aspects of how LWT handles threads did not directly map well to a parallel implementation of the library. In some cases this meant that special care was neccessarily taken to handle events in the correct way. One notable example
-of this is a race condition between threads being placed on and taken off the yield queue before being appropriately initialised.
+Some aspects of how LWT handles threads did not directly map well to a parallel implementation of the interface. In some cases this meant that special care was taken to handle events in an appropriate manner. One notable example
+of this is a race condition between lightweight threads being placed on and taken off the yield queue before being appropriately initialised.
 
 A visual description of the problem is outline in figure~\ref{fig:bind_callback}.
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{bind_callback}
-\caption{Figure (a) describes the process which causes the LWT thread to be exposed before it has finished procssing. The dotted arrows represent references still held in memory and the solid lines represent movement of data. 1. The
+\caption{Figure (a) describes the process which causes the LWT thread to be exposed before it has finished processing. The dotted arrows represent references still held in memory and the solid lines represent movement of data. 1. The
 yield function is called and evaluated to a yield thread. This yield thread is placed straight onto the yield queue. 2. An idle worker thread picks up the yield thread and begins processing it whilst the bind function is processing
 more steps. 3. The worker thread has finished executing the yield thread and therefore it remains somewhere in memory. The yield thread is not collected by the garbage collector yet since there is still a reference to the data from
-within the bind call. Furthermore since the bind function has not completed at this point, the yield thread execution has not performed anything useful and has just infact terminated. 4. The bind has now finished attaching a waiter to
-the yield thread that should execute when the yield thread is awoken, however this step has already occurred, therefore instead the yield thread is collected by the garbage collector and the function never exexutes. This is a classic
+within the bind call. Furthermore since the bind function has not completed at this point, the yield thread execution has not performed anything useful and has just in fact terminated. 4. The bind has now finished attaching a waiter to
+the yield thread that should execute when the yield thread is awoken, however this step has already occurred, therefore instead the yield thread is collected by the garbage collector and the function never executes. This is a classic
 {\em Time of Check to Time of Use (TOCTTOU)} problem. Figure (b) shows the same 4 steps as figure (a) with the bind callback in place. 1. The yield function is evaluated to a yield thread and the locked yield thread is placed onto the
 yield queue. 2. Bind continues to execute but no worker threads are able to acquire the yield thread's lock therefore no worker threads will execute the yield thread. 3. Same as step 2. 4. Bind has finished and the next command begins
 executing. Bind has released the yield lock by calling the threads callback function which contains the {\em unlock code}. Now a thread is able to take the yield thread off the yield queue and begin execution with the correct waiters
@@ -645,32 +666,32 @@ attached.}
 
 \label{fig:bind_callback}
 \end{figure}
-The problem occurs when attempting to bind a thread to a yield thread so that it may be run asynchronously. The yield function adds a thread onto the yield queue instantly without the waiters being added to a waiter list. This means
+The problem occurs when attempting to bind a lightweight thread to a yield thread so that it may be run asynchronously. The yield function adds a thread onto the yield queue instantly without the waiters being added to a waiter list. This means
 that any worker thread is able to remove the yield thread from the queue and run it. At the point the bind has added a waiter function to the waiter list, the yield thread has finished executing and will therefore never run the
 waiters now attached. Finally the garbage collector picks up the yield thread which has finished and it is never to be seen again. 
 
 %
 % Talk about how this was overcome using bind callback
 %
-Although the gap between where this race condition occurs within the code is relatively small, the problem occurs suprisingly frequently. To overcome this issue, it was neccessary to lock the yield thread between the point of creation
+Although the section of code where this race condition occurs is relatively small, the problem occurs surprisingly frequently. To overcome this issue, it was necessary to lock the yield thread between the point of creation
 and the end of the bind. However this fix makes an assumption on how the yield thread is used -- it suggests that a yield thread will only ever be used in conjunction with a call to bind. While this isn't strictly true, since a yield
-thread is a fully qualified thread on its own that simply does nothing, justification to this assumption is that -- to my understanding -- it is only ever sensibly used in conjunction with bind. To create a yield thread which sleeps
+thread is a fully qualified lightweight thread on its own that simply does nothing, justification to this assumption is that -- to my understanding -- it is only ever sensibly used in conjunction with bind. To create a yield thread which sleeps
 and wakes with no functions to run upon termination is -- useless. Furthermore the only way to achieve some kind of useful processing with a yield thread is to attach a waiter function which will run when the thread terminates.
 
-To lock and unlock the yield thread separated accross two functions, I used an additional thread value containing an option for a bind callback. A thread using bind which requires post bind processing can fill this option value with
+To lock and unlock the yield thread separated across two functions, I used an additional thread value containing a possibly empty slot for a bind callback. A thread using bind which requires post-bind processing can fill this slot value with
 a function that performs the appropriate post-processing. Bind, upon completing its binding operation, will then execute the callback if it exists, finishing off the thread processing appropriately. Using this new bind callback, the
-call to yield first locks the yield thread before creation and adds a bind callback function which unlocks the thread. In this state, no worker threads will remove a thread on the yield queue which is currently locked (a requirement
+call to yield first locks the yield thread before creation and adds a bind callback function which unlocks the yield thread. In this state, no worker threads will remove a lightweight thread on the yield queue which is currently locked (a requirement
 for removing a thread from the yield queue is that the worker thread is able to acquire the thread lock). Once the bind operation has completed on the yield thread, the callback is run which unlocks the thread, allowing it to be
-picked up by a worker thread to begin execution. A visual description of this change is outlined in figure~something\todo{draw new diagram of locked thread being bound and then unlocked later on, possibly (seems hard to draw).}
+picked up by a worker thread to begin execution.
 
 %
 % Special care was taken with the callbacks which could be potentially accessed by many threads simultaneously. Data had to be made atomic, some converted to thread local variables, etc.
 %
 \paragraph{ACID Callbacks}
 \label{para:acid_callbacks}
-Callbacks in parallel processing can be called by any and all threads that have access to the code and shared data at any time, therefore it was also important to the rewrite the LWT callbacks such that each thread accessing the
-callback does so in isolation to any other concurrent thread, the shared data is accessed atomically, the shared data remains in a consistent state and the shared data changes remain -- which are the so-called ACID properties of
-database transactions. For two out of for of the ACID properties (consistency and durability) LWT's code already manages well, however atomicity and isolation issues needed to be dealt with. This mainly consisted of converting shared
+Callbacks in parallel processing can be called by any and all worker threads that have access to the code and shared data at any time, therefore it was also important to rewrite the LWT callbacks such that each thread accessing the
+callback does so in isolation from any other concurrent thread, the shared data is accessed atomically, the shared data remains in a consistent state and the shared data changes remain -- which are the so-called ACID properties of
+database transactions. For two out of four of the ACID properties (consistency and durability) LWT's code already manages well, however atomicity and isolation issues needed to be dealt with. This mainly consisted of converting shared
 data to their atomic type equivalent, and ensuring data dependencies were kept serialised.
 
 \section{Profiling}
@@ -689,34 +710,35 @@ data to their atomic type equivalent, and ensuring data dependencies were kept s
 % for calling java function directly, but they create systematic errors so the speedup scale should remain unchanged (is this correct, i'm sure it is). 
 %
 
-Assembling an appropariate profiling suite to test the newly implemented functionality of OCaml-Java and LWT was an equally important step as implementation. Vanilla OCaml allows a special flag for compiling native code with gprof
-profiling compatibility \cite{leroy2013}, however this is clearly unavailable since we are compiling to java bytecode using OCaml-Java. There is no one single Java profiler tool such as gprof, however there are many open source
+Assembling an appropriate profiling suite to test the newly implemented functionality of OCaml-Java and LWT was a step as important as the interface implementation. The regular OCaml compiler allows a special flag for compiling native code with gprof
+profiling compatibility\cite{leroy2013}, however this is clearly unavailable since we are compiling to Java bytecode using OCaml-Java. There is no one single Java profiler tool such as gprof, however there are many open source
 alternatives. These are highly configurable and complex software suites which allow a lot of configuration -- most of which I wouldn't need. For the purpose of profiling this project, I would simply require an accurate timer to
 determine the time taken to complete a function so that these times may be compared and the values used in speed up calculations in chapter~\ref{chap:evaluation}. Taking this into consideration, I wrote a very simple timer module in
-OCaml using Java's high-resolution time source via java.lang.System.nanoTime, in fact within the Java documentation, example code shows the use of nanoTime in determining how long a code segment took to run. Listing~something\todo{add
-listing for .mli of timer module} shows some of the commands used within the simple timer module.
-
-To utilise Java functions and references directly through OCaml, I used the interface describead in section~\ref{sec:investigating_ocaml-java}. There is no documentation on the speed of executing Java functions via the interface in
-comparisson to direct calls, therefore it is possible that the interface will introduce some systematic errors, however they should did not interfere with the results of the project as demonstrated in chapter~\ref{chap:evaluation}.
+OCaml using Java's high-resolution time source via {\tt java.lang.System.nanoTime}. In fact, determining function running time is a typical use of the nanoTime method, as shown by the fact that within the Java documentation example
+code is given for exactly that purpose. Listing~\ref{lst:timer} shows some of the commands used within the simple timer module.
+\hfill\\
+\lstinputlisting[caption={Timer module function types},label={lst:timer}]{timer.mli}
+\hfill\\
+To utilise Java functions and references directly through OCaml, I used the OCaml-Java interface described in section~\ref{sec:investigating_ocaml-java}. There is no documentation on the speed of executing Java functions via the interface in
+comparison to direct calls, therefore it is possible that the interface will introduce some additional overheads, however they did not interfere with the results of the project as demonstrated in chapter~\ref{chap:evaluation}.
 
 %
 % Wrote mergesort benchmark (again, example code and how it would run in the system)
 %
-Choosing an appropriate set of benchmarks which exploits parallelism well was important to demonstrate the true capabilities of the system. One of my choices for parallel benchmarking was merges sort after investigating the Barcelona
-OpenMP Task Suite -- one of their benchmarks is an integer sort algorithm based on the Cilk sorting algorithm. The Cilk project is a suite for algorithmic multithreaded programming and the Cilk sort performs a mixture of merge sort
-and insertion sort for arrays smaller than a certain threshold. Furthermore the classic Introductions to Algorithms book \cite{cormen2009} uses merge sort as an introduction to algorithms that exploit parallelism well.  is a mixture of
-a merge and insertion sort. The mergesort algorithm implemented in OCaml is essentially a mirror of the Cilk algorithm with the exception that the insertion sort in Cilk has been replaced with a simple call to OCaml's default array
-sorting algorithm `Array.sort'.
+Choosing an appropriate set of benchmarks which exploits parallelism well was important to demonstrate the true capabilities of my interface. To aid my choice I looked at the Barcelona OpenMP Task Suite and their choices of parallel
+benchmarks. One of their benchmarks is an integer sort algorithm based on the Cilk sorting algorithm. The Cilk project is a suite for algorithmic multithreaded programming and the Cilk sort performs a merge sort at the parallel level
+and an insertion sort at the sequential level, where sequential sorting is triggered by reaching a sub array size below a particular threshold. Furthermore the classic Introductions to Algorithms book \cite{cormen2009} uses merge sort
+as an introduction to parallel algorithms. Therefore the most sensible choice for parallel benchmarking was the parallel merge sort algorithm due to its use in use in professional parallel benchmarking suites and major texts. The merge sort algorithm
+I implemented in OCaml is a mirror of the Cilk algorithm with the exception that the insertion sort in Cilk has been replaced with a simple call to OCaml's default array sorting algorithm {\tt Array.sort}.
 
-The merge sort algorithm within the system will continuously add merge sort commands for sub arrays onto the yield queue, where each sub array is of course half the size of its originating array. This will continue until a sub array
+The merge sort algorithm within the system will continuously add merge sort commands for sub arrays onto the yield queue, where each sub array is half the size of its originating array. This will continue until a sub array
 drops below the linear sort threshold, at which point OCaml's default array sorting algorithm is called on the sub array. The threads are taken off the yield queue and executed on multiple worker threads as explained in
-section~\ref{sec:parallelism_overview}. Figure blablabla shows the state of the system in the middle of the algorithm\todo{do this figure, maybe idk it seems a bit useless}.
+section~\ref{sec:parallelism_overview}.
 
 %
 % Wrote fibonacci benchmark (give example code, and talk about how it would run in the system)
 %
-Another choice of benchmark which was both easy to implement and also featured within the Introduction to Algorithms book was the recursive fibonacci algorithm adapted for multithreading.\todo{say something more about fib sort
-here}
+Another choice of benchmark which was both easy to implement and also featured within the Introduction to Algorithms book was the recursive Fibonacci algorithm adapted for multithreading.
 
 %
 % In order to benchmark the speedup gained from parallel OCaml code, I wrote some benchmarks in three different ways: normal OCaml, singlethreaded LWT, parallel/asynchronous LWT.
@@ -735,7 +757,7 @@ here}
 %
 
 %
-% Tried to get away from OCamlfind by replacing OCamlfind binaries with a `proxy' binary which takes OCamlfind commands and spits out the OCaml command result.
+% Tried to get away from Findlib by replacing Findlib binaries with a `proxy' binary which takes Findlib commands and spits out the OCaml command result.
 %
 
 %
@@ -762,42 +784,43 @@ here}
 %
 % Learned a lot about taking on a large project. Shouldn't dive straight in, etc...
 %
-LWT has a very large collection of I/O modules which provide asynchronous I/O functionality and bindings to both Unix and Windows. This set of modules provides a generous amount of functionality to the core asynchronous library
-provided by LWT. Now that the core library has been converted to work in parallel with OCaml-Java, it is also possible to adapt the LWT I/O modules to also utilise the Java I/O classes to provide asynchronous I/O to the system as
+LWT has a very large collection of I/O modules which provide asynchronous I/O functionality and bindings to both Unix and Windows. This set of modules adds a generous amount of functionality to the core asynchronous library
+provided by LWT. Now I have converted the core library to work in parallel with OCaml-Java, it is also possible to adapt the LWT I/O modules to also utilise the Java I/O classes to provide asynchronous I/O to the system as
 well. 
 
 My approach to this problem would be in three stages:
 
 \begin{enumerate}
-\item Attempt to compile LWT in its entireity with OCaml-Java.
+\item Attempt to compile LWT in its entirety with OCaml-Java.
 \item Filter out external functions that will not run.
 \item Build up functionality in stages beginning from the filtered functions.
 \end{enumerate}
 
-Attempting to compile LWT in it's entireity is a difficult job in itself as LWT relies on other packages such as OCamlbuild and OCamlfind. The most straight forward option to compiling LWT would be to manually extract the build
-commands from OCamlbuild and output them to a custom build script, which performs the same standard job from a clean build directory. The OCamlfind package acts as an interface which allows easy package linking and more when building
-OCaml programs. OCamlfind spits out commands which contain all the relevant switches and linked files to compile a peice of OCaml software correctly, therefore by intercepting these commands and replacing them in the build script, I
-can remove OCamlfind and OCamlbuild support entirely. Furthermore LWT also uses the CamlP4 processor to provide many very useful shorthands when writing asynchronous LWT code. However there are a few bugs with the OCaml-Java Camlp4
-system that exist\todo{link camlp4 bugs in mantis bug tracker}, therefore these files can be manually preprocessed using the default Camlp4 preprocessor which will produce the same output.
+Attempting to compile LWT in it's entirety is a difficult job in itself as LWT relies on other packages such as OCamlbuild\footnote{OCamlbuild -- http://caml.inria.fr/pub/docs/manual-ocaml-400/manual032.html} and
+Findlib\footnote{Findlib -- http://projects.camlcity.org/projects/findlib.html}, which are not fully supported by OCaml-Java. The most straight forward option to compiling LWT would be to manually extract the build
+commands from OCamlbuild and output them to a custom build script, which performs the same standard job from a clean build directory. The Findlib package acts as an interface which allows easy package linking and more when building
+OCaml programs. Findlib outputs commands which contain all the relevant switches and linked files to compile a piece of OCaml software correctly, therefore by intercepting these commands and replacing them in the build script, I
+can remove Findlib and OCamlbuild support entirely. Furthermore LWT also uses the CamlP4 processor to provide many very useful shorthands when writing asynchronous LWT code. However there are a few bugs with the OCaml-Java Camlp4
+system, therefore these files can be manually preprocessed using the default Camlp4 preprocessor which will produce the same output.
 
-The second stage involves filetering out external commands that will not run. Examples of these commands are calls to system semaphores and mutexes, file manipulation commands and more, and depend on the system that LWT has been
-compiled for. OCaml-Java does not support any external commands written in C/C++, in fact it expects these external command calls to link to Java functions, existing in Java class files. Removing these external function calls from the
+The second stage involves filtering out foreign function calls that will not run under the JVM. Examples of these commands are calls to system semaphores and mutexes, file manipulation commands and more, as they are all mostly system
+dependent. OCaml-Java does not support any foreign function calls written in C/C++, in fact it expects these external command calls to link to Java functions, existing in Java class files. Removing these external function calls from the
 OCaml code can be most easily done by replacing the calls with exceptions of the same command name -- done with a sed script. This with both allow the code to compile and also make the third stage of the I/O interface creation process
 much simpler.
 
-The third involves actually converting the external C/C++ commands into Java code so that it may be executed with the same (roughly the same) effect as it's C/C++ counterpart. At this stage of the conversion process, the LWT code
-should be compiling, however no I/O should yet be working but infact terminating with exceptions at the external calls. Depending on what code that I would like to have working first, I would begin with a test LWT program that
-utilises I/O, compile it and follow the exceptions, implementing each function until the software executes without fail. This may continue to have chunks of the I/O working so that results may be seen sooner than later. An alternate
-approach would be to just attempt to implement all the functions, followed by testing and debugging -- however the codebase is large and being unable to test the functions (unable to test easily) would mean there is a larger codebase
-to worry about when at the testing phase. The former approach is far more akin to an iterative/agile development process which is far more flexible to work with.
+The third stage involves actually converting the external C/C++ commands into Java code so that it may be executed with (roughly) the same effect as it's C/C++ counterparts. At this stage of the conversion process, the LWT code
+should be compiling, however no I/O should yet be working but rather should be terminating with exceptions at the external calls. Depending on what code that I would like to have working first, I would begin with a test LWT program that
+utilises I/O, compile it and follow the exceptions, implementing each function until the software executes without fail. The idea is that this would create sections working I/O so that results may be seen sooner than later. An alternative
+approach would be to just attempt to implement all the functions, followed by testing and debugging -- however the LWT codebase is large and being unable to test the functions (unable to test easily) would mean there is more code to
+sift through during the testing phase. The former approach is far more akin to an iterative/agile development process which is far more flexible to work with.
 
 \section{Summary}
 \label{sec:implementation_summary}
-In this chapter I began with an overview of how parallelism is achieved between OCaml-Java and LWT, which uses worker threads that are fed LWT threads off a yield queue, and explained that the rest of the chapter details the
-production of this system in it's different approaches. The first approach explained was the runtime lock approach which acted mostly as a stepping stone into a stage where LWT was running in parallel on the JVM, whilst abstracting
+In this chapter I began with an overview of how parallelism is achieved between OCaml-Java and LWT, which uses worker threads that are fed lightweight threads off a yield queue, and explained that the rest of the chapter details the
+production of this system in it's different approaches. The first approach explained was the single global lock approach which acted mostly as a stepping stone into a stage where LWT was running in parallel on the JVM, whilst abstracting
 away the problem thread safety. This was a sensible method of dividing the task of implementing the system as the tasks of attempting to get LWT working on the JVM and exploiting parallelism have minimal overlap. The coarse grained
-locking approach section described the transition from parallel LWT code with no parallel benefit, to LWT threads being scheduled appropriately to many simultaneously executing worker threads. This stage introduced thread safety
-mechanisms based around lock aquisition and also the unforseen technical details on getting LWT working accross multiple threads, including the half-baked thread problem, lock-sharing problem and ensuring callbacks adhered to the ACID
+locking approach section described the transition from parallel poorly scheduled LWT threads, to LWT threads being scheduled appropriately to many simultaneously executing worker threads. This stage introduced thread safety
+mechanisms based around lock acquisition and also the unforeseen technical details on getting LWT threads locking across multiple {\tt thread\_repr} objects, and solving the half-baked thread problem. I also ensured all callbacks adhered to the ACID
 concurrency properties. Finally the profiling section details the design decisions taken whilst deciding on an appropriate choice of parallel benchmarks to implement for testing purposes, as well as methods of profiling OCaml running
 under the JVM without the help of OCaml's default compiler flags and settings.
 

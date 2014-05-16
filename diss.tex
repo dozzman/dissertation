@@ -8,11 +8,12 @@
 \usepackage{a4}
 \usepackage{verbatim}
 \usepackage{todonotes}  % todo notes
-\usepackage{cite}
 \usepackage{listings}   % Code listings
 \usepackage{color}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage[utf8]{inputenc}
+
 
 % set default language to OCaml
 \lstset{language=[Objective]Caml,
@@ -44,11 +45,12 @@
 
 \renewcommand{\baselinestretch}{1.1}    % adjust line spacing to make
                                         % more readable
+                                        
+\usepackage[font={small,it}]{caption}
 
 \begin{document}
 
 \bibliographystyle{plain}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Title
 
@@ -102,7 +104,7 @@ to Java bytecode compiler OCaml-Java, thus allowing software written with LWT to
 \section*{Work Completed}
 The LWT threading capabilities have been integrated with OCaml-Java via the development of my interface, thus allowing a subset of LWT programs to compile to Java bytecode and run in parallel on the JVM. This is done by scheduling
 lightweight threads between Java worker threads which continuously execute code until interrupted. Test code written for this interface achieve similar speedup gains to code written directly in Java (speedup of 3.5 -- 4 with the
-interface compared to a speedup of 5 -- 5.5 on vanilla Java), with an again similar speedup curve -- which is a very positive result. 
+interface compared to a speedup of 5 -- 5.5 on normal Java), with an again similar speedup curve -- which is a very positive result. 
 
 \section*{Special Difficulties}
 None
@@ -180,7 +182,7 @@ Functional Programming concepts have been around since Turing and Church's work 
 has finally caught on in mainstream development and therefore languages such as C++ and Java are incorporating notable functional programming techniques such as type inference\cite{web:autokeyword} and first-class anonymous functions
 (lambdas)\cite{web:javalambda}. Notable functional languages include Haskell and ML (which has inspired more widely used functional languages for example OCaml\cite{madhavapeddy2013}). OCaml is a very extensive functional language
 which also includes an elegant object system, which incorporates the best of both functional and imperative programming techniques. The ability to develop in these two different programming styles interchangeably makes OCaml a very
-powerful language to develop with. Unfortunately OCaml in it's current vanilla state is unable to compile parallel code, which of course is becoming an ever more necessary approach to development as systems become more and more
+powerful language to develop with. Unfortunately OCaml in it's current state is unable to compile parallel code, which of course is becoming an ever more necessary approach to development as systems become more and more
 parallel.
 \hfill\\
 \hfill\\
@@ -464,7 +466,7 @@ will be used for backup.
 %   files and replace them inside the code directory (with a little difficulty since Camlp4 reverts to bytecode when the output is redirected to a file, which meant a lot of struggle wondering why the code was being preprocessed to
 %   garbage, furthermore the Camlp4 processing is laced throughout the build commands which meant removing all the p4 switches manually)
 %   Came accross many bugs in the OCaml-Java during this process:
-%       When compiling OCaml code using ocamlc provided by OCaml-Java, the `shebang' isn't included in the bytecode (unlike vanilla OCaml) therefore you cannot execute it with `./', you must execute it with `ocamlrun'. Caused a lot of
+%       When compiling OCaml code using ocamlc provided by OCaml-Java, the `shebang' isn't included in the bytecode (unlike normal OCaml) therefore you cannot execute it with `./', you must execute it with `ocamlrun'. Caused a lot of
 %       pain when trying to figure out why the executeables were not executing.
 %       Camlp4 is broken for OCaml-Java 2.0 version 7 and greater. Returns error 'unable to determine class for symbol Camlp4'
 %   Managed to get a lot compiling with OCaml-Java, replaced all the C/C++ external calls with exceptions so that I could catch what I needed to implement first to get some kind of result.
@@ -535,7 +537,7 @@ The functions to be executed by the worker threads will most likely add more lig
 Figure~\ref{fig:yield_queue} describes the functionality of the yield queue graphically.
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{yield_queue}
-\caption{Visual demonstration of the process by which LWT threads are managed and executed on the worker threads. The diagram shows the two bottom worker threads placing LWT threads onto the yield queue, whereas the top left worker
+\caption[Yield Queue Diagram]{Visual demonstration of the process by which LWT threads are managed and executed on the worker threads. The diagram shows the two bottom worker threads placing LWT threads onto the yield queue, whereas the top left worker
 thread is removing an LWT thread from the yield queue and the top right thread is currently processing an LWT thread. Omitted from this diagram is the notion of the yield queue lock which ensures mutually exclusive access to the yield
 queue.}
 \label{fig:yield_queue}
@@ -624,7 +626,7 @@ means only one lock operation would need to be performed at any level in the cha
 
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{thread_repr}
-\caption{The diagram shows an example of an lightweight thread at the bottom of a chain of thread\_repr objects. The letters to the right of each thread\_repr object and the lightweight thread is a reference to the object from within the program. There
+\caption[Layered thread\_repr diagram]{The diagram shows an example of an lightweight thread at the bottom of a chain of thread\_repr objects. The letters to the right of each thread\_repr object and the lightweight thread is a reference to the object from within the program. There
 may be access at any point within the chain during execution, therefore it is important for every thread\_repr object to share the same lock -- to prevent two worker threads using the same lightweight thread from different points in the
 chain. The links between thread\_repr objects always create a directed acyclic graph which is why locking method 1 will always cross a lock which has been acquired if any locks have been.}
 \label{fig:thread_repr}
@@ -654,7 +656,7 @@ of this is a race condition between lightweight threads being placed on and take
 A visual description of the problem is outline in figure~\ref{fig:bind_callback}.
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{bind_callback}
-\caption{Figure (a) describes the process which causes the LWT thread to be exposed before it has finished processing. The dotted arrows represent references still held in memory and the solid lines represent movement of data. 1. The
+\caption[Bind Callback diagram]{Figure (a) describes the process which causes the LWT thread to be exposed before it has finished processing. The dotted arrows represent references still held in memory and the solid lines represent movement of data. 1. The
 yield function is called and evaluated to a yield thread. This yield thread is placed straight onto the yield queue. 2. An idle worker thread picks up the yield thread and begins processing it whilst the bind function is processing
 more steps. 3. The worker thread has finished executing the yield thread and therefore it remains somewhere in memory. The yield thread is not collected by the garbage collector yet since there is still a reference to the data from
 within the bind call. Furthermore since the bind function has not completed at this point, the yield thread execution has not performed anything useful and has just in fact terminated. 4. The bind has now finished attaching a waiter to
@@ -713,7 +715,7 @@ data to their atomic type equivalent, and ensuring data dependencies were kept s
 Assembling an appropriate profiling suite to test the newly implemented functionality of OCaml-Java and LWT was a step as important as the interface implementation. The regular OCaml compiler allows a special flag for compiling native code with gprof
 profiling compatibility\cite{leroy2013}, however this is clearly unavailable since we are compiling to Java bytecode using OCaml-Java. There is no one single Java profiler tool such as gprof, however there are many open source
 alternatives. These are highly configurable and complex software suites which allow a lot of configuration -- most of which I wouldn't need. For the purpose of profiling this project, I would simply require an accurate timer to
-determine the time taken to complete a function so that these times may be compared and the values used in speed up calculations in chapter~\ref{chap:evaluation}. Taking this into consideration, I wrote a very simple timer module in
+determine the time taken to complete a function so that these times may be compared and the values used in speedup calculations in chapter~\ref{chap:evaluation}. Taking this into consideration, I wrote a very simple timer module in
 OCaml using Java's high-resolution time source via {\tt java.lang.System.nanoTime}. In fact, determining function running time is a typical use of the nanoTime method, as shown by the fact that within the Java documentation example
 code is given for exactly that purpose. Listing~\ref{lst:timer} shows some of the commands used within the simple timer module.
 \hfill\\
@@ -736,7 +738,7 @@ drops below the linear sort threshold, at which point OCaml's default array sort
 section~\ref{sec:parallelism_overview}.
 
 %
-% Wrote fibonacci benchmark (give example code, and talk about how it would run in the system)
+% Wrote Fibonacci benchmark (give example code, and talk about how it would run in the system)
 %
 Another choice of benchmark which was both easy to implement and also featured within the Introduction to Algorithms book was the recursive Fibonacci algorithm adapted for multithreading.
 
@@ -834,8 +836,8 @@ under the JVM without the help of OCaml's default compiler flags and settings.
 %       Clear from the results of the Mergesort graph
 % talk how testing was achieved: On my mac, 2 cores 4 hw threads, desktop - similar, roo - 48 core machine.
 % implemented fib and merge sort (based on cilk) for parallel benchmarks. Versions written in normal OCaml, LWT and asynchronous LWT to compare the differences between them.
-% Graphed number of threads against each other to show speed up
-% speed up calculations and other theories e.g. ahmdals law, etc.
+% Graphed number of threads against each other to show speedup
+% speedup calculations and other theories e.g. ahmdals law, etc.
 % graphed singlethreaded to multithreaded to show scalability
 % fib did particularly bad because all it does is expose the overheads of parallelism (one addition per thread, however theres a ton of thread creation and processing behind each one).
 % mergesort did much better as when it gets down to 1000 values, the threads are running parallel sorts on 1000 values between 48 cores, which is really fast.
@@ -848,14 +850,20 @@ under the JVM without the help of OCaml's default compiler flags and settings.
 %
 % List success criteria and discuss how each of these were achieved (if at all) also evaluate how the project went
 %
-Within this chapter I demonstrate that my success criteria has been achieved. Below is a reminder of these criteria with a small summary of how each criteria has been achieved:
+
+Within this chapter I discuss the merge sort test results which are graphed and the nature of the graph shape is explained with a proof that the speedup of parallel merge sort is $O(lg\,n)$, furthermore it is shown that this is
+consistent with the results obtained from a parallel merge sort written in Java. We also use the merge sort data do analyse the approximate threading overhead costs to discover how much processing power we are using on thread
+management. Fibonacci results are graphed and discussed, including how different implementations of the recursive parallel Fibonacci algorithm can achieve different results. I mention how the tests performed and the results obtained
+relate to my success criteria outlined in my project proposal. I also discuss how the tests were run, which consists of a small test suite deployed to the test machines I have been using. 
+
+The following evaluation demonstrates that my success criteria has been achieved. Below is a reminder of these criteria with a small summary of how each criteria has been achieved:
 
 \begin{enumerate}
-\item {\bf I am able to show the scalability difference between two programs using the same piece of LWT code, one compiled using the original LWT libraries under the normal OCaml compiler and one compiled using my ported LWT libraries
+\item {\em I am able to show the scalability difference between two programs using the same piece of LWT code, one compiled using the original LWT libraries under the normal OCaml compiler and one compiled using my ported LWT libraries
 under OCaml-Java, running on the JVM.}\hfill \\
-The scalability differences between fibonacci on vanilla LWT and  are demonstrated within this chapter.
-\item {\bf Parallel processing benchmark can be used to determine the scalability using LWT under OCaml-Java and using LWT under the normal OCaml environment.}\hfill \\
-The merge sort parallel processing benchmark scalability is also demonstrated in this chapter.
+The scalability differences between Fibonacci on normal LWT and my interface are demonstrated within this chapter in section~\ref{sec:fibonacci}.
+\item {\em Parallel processing benchmark can be used to determine the scalability using LWT under OCaml-Java and using LWT under the normal OCaml environment.}\hfill \\
+The merge sort parallel processing benchmark scalability is also demonstrated in this chapter in section~\ref{sec:merge_sort}.
 \end{enumerate}
 
 %
@@ -863,7 +871,8 @@ The merge sort parallel processing benchmark scalability is also demonstrated in
 %
 \section{Testing}
 \label{sec:testing}
-To perform the actual testing and result collection, I constructed a small test suite to automate tests both on my own machine and on Roo. This test suite consisted of functions which allow specific test parameters to be passed to the
+To perform the actual testing and result collection, I constructed a small test suite to automate tests both on my own machine and on Roo. Roo is a 48-core computer which I was provided access to by the labs in order to conduct my
+experiments. The relevant details of Roo's specifications, along with my own Macbook specifications, can be found in appendix~\ref{apdx:machine_specifications}. This test suite consisted of functions which allow specific test parameters to be passed to the
 parallel benchmarks and software, such as the number of Java worker threads that must be created, the size of the merge sort array to be tested and other useful test parameters. The test suite also automatically determines whether
 some error occurred during testing by analysing the output and determining whether some tests should be repeated. The analysis does not test for anomalous results but rather incomplete/corrupted results. The help text is shown below:
 \begin{lstlisting}[keywordstyle=\color{black}]
@@ -873,15 +882,19 @@ Options Are:
     -F num  From value
     -T num  To value
     -S num  Step value
-    -j num  Number of worker threads to be created in this test (not speficying will
-            cause the test to repeat for 0 <= j <= cores detected in machine)
+    -j num  Number of worker threads to be created in this test 
+            (not specifying will cause the test to repeat for 0
+             <= j <= cores detected in machine)
     -n num  Size value
-    -y num  Type of msort test to do, either msort varying array size (where num = 1) or
-            sort varying linear sort limit (where num = 2). When type 1 is selected, the
-            to, from and step values determine the range of array sizes to test (and the
-            step size inbetween), where the size value determines the size of the linear
-            sort limit. When type 2 is chosen, the to, from and step values determine
-            the linear sort limit value and the size value determines the array size to 
+    -y num  Type of msort test to do, either msort varying array 
+            size (where num = 1) or sort varying linear sort 
+            limit (where num = 2). When type 1 is selected, the
+            to, from and step values determine the range of 
+            array sizes to test (and the step size in-between), 
+            where the size value determines the size of the 
+            linear sort limit. When type 2 is chosen, the to, 
+            from and step values determine the linear sort limit 
+            value and the size value determines the array size to 
             be used throughout the tests.
 \end{lstlisting}
 Without any parameters passed, the test suite simply runs the default tests which provide appropriate numbers for analysis.
@@ -889,37 +902,37 @@ Without any parameters passed, the test suite simply runs the default tests whic
 \section{Merge Sort}
 \label{sec:merge_sort}
 The parallel merge sort algorithm briefly mentioned in section~\ref{sec:profiling} provides a good parallelism benchmark to test the interface with. Firstly, each recursive call of the merge sort works on a completely independent sub
-section of the array from its sibling's recursive call. This means that (assuming a sensible data structure used, such as a contiguous array in memory) there is little/no data dependency between concurrent threads running merge sort
+section of the array from its sibling's recursive call. This means that (assuming a contiguous in-memory array is used) there is little/no data dependency between concurrent threads running merge sort
 and therefore they may run without stalling each other or requiring special locks. Furthermore, the Cilk benchmark which this current merge sort implementation is based on performs a linear sort when the array size drops below a
 certain threshold. By adjusting this value appropriately we are able to achieve the best performance gains by allowing LWT threads to perform large chunks of processing and less thread management. The pseudo code for the merge sort
 algorithm is provided below:
 
-Dont forget to describe the merge sort algorithm here!\todo{add merge sort pseudo code here}
+Don't forget to describe the merge sort algorithm here!\todo{add merge sort pseudo code here}
 
 Apart from the actual sorting algorithm, there is the situation of creating appropriate arrays for the merge sort algorithm to test and sort. In fact the merge sort is provided a random list of numbers from a range equal to the length
-of the array: that is, an array of length 10 will contain only the numbers 1 -- 10 at random. This made specifying the range of numbers to the OCaml {\tt Random.int} function easier mostly. Furthermore the merge sort algorithm was to
-be run at least twice, once using LWT with no parallelism and one with parallelism, therefore I made copies of the arrays and provided the copies to each function so that they would work on the same, equal data -- however the array's
+of the array: that is, an array of length 10 will contain only the numbers 1 -- 10 at random. This made specifying the range of numbers to the OCaml {\tt Random.int} function easier. Furthermore the merge sort algorithm was to
+be run at least twice, once using LWT with no parallelism and one with parallelism, therefore I made copies of the arrays and provided the copies to each function so that they would work on the same, equal data. However the array's
 do change between different instantiations of the test, such as when changing the number of worker threads being tested.
 
 \subsection{Performance Analysis}
 \subsubsection{Merge Sort Speedup}
 \label{subsec:merge_sort_performance_analysis}
-The performance results of the merge sort algorithm are shown in the speed up graph in figure~\ref{fig:msort_speedup_graph}, where the x~axis gives the number of cores in use and the y~axis is the speed up, calculatated as
+The performance results of the merge sort algorithm are shown in the speedup graph in figure~\ref{fig:msort_speedup_graph}, where the x~axis gives the number of cores in use and the y~axis is the speedup, calculated as
 $T_1 / T_n$ where $T_1$ is the time taken to perform the sort on 1 thread and $T_n$ is the time taken to execute the sort on n threads.
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{msort_speedup_graph}
-\caption{The merge sort speedup graph, plotted with a range between 1 and 48 cores on the x~axis; speedup calculated as $T_{1} \over T_{\infty}$ along the y~axis. The graph shows a logarithmic curve which seems to plateau around 3.5
--- 4 times speedup. The logarithmic shape is exactly what should be expected as the merge sort algorithm has maximum speed up in the order $\Theta(lg\,n)$ which is shown within section~\ref{subsec:merge_sort_performance_analysis}.
-This result is also mirrored in a vanilla Java merge sort speedup graph shown in figure~\ref{fig:java_speedup_graph}. Interesting aspects of the graph are the jitter, which can be explained by the fact that the asynchronous nature of
+\caption[Parallel Merge Sort Speedup Graph]{The merge sort speedup graph, plotted with a range between 1 and 48 cores on the x~axis; speedup calculated as $T_{1} \over T_{\infty}$ along the y~axis. The graph shows a logarithmic curve which seems to plateau around 3.5
+-- 4 times speedup. The logarithmic shape is exactly what should be expected as the merge sort algorithm has maximum speedup in the order $\Theta(lg\,n)$ which is shown within section~\ref{subsec:merge_sort_performance_analysis}.
+This result is also mirrored in a normal Java merge sort speedup graph shown in figure~\ref{fig:java_speedup_graph}. Interesting aspects of the graph are the jitter, which can be explained by the fact that the asynchronous nature of
 the algorithm means that the execution paths are slightly different each time, in conjunction with the fact that the arrays are generated randomly each time with only similar length therefore the array ordering may cause a faster or
 slower execution time.}
 \label{fig:msort_speedup_graph}
 \end{figure}
-There is a clear, almost linear speed up between using 0 and 8 cores for the sort, reaching up to a maximum speed up of between approximately 3 or 4. However after this point, the graph seems to plateau with a little jitter inbetween
+There is a clear, almost linear speedup between using 1 and 8 cores for the sort, reaching up to a maximum speedup of between approximately 3 or 4. However after this point, the graph seems to plateau with a little jitter in between
 successive increments in the number of cores.
 
 We can first analyse the serial and parallel merge sort algorithms mathematically and then apply this to the outcome of the graph. It is a well known fact that the average running time of merge sort is $\Theta(lg\,{n})$, this can be
-shown by considering the following recurrance relation:
+shown by considering the following recurrence relation:
 
 \[
 T(n) = 
@@ -929,24 +942,24 @@ T(n) =
     \end{cases}
 \]
 
-This recurrance relation is constructed by dividing the merge sort into its component operations: {\em Divide, Conquer and Combine}\footnote{Divide, Conquer and Combine is the way CLRS describes the seperate stages of merge sort. I
+This recurrence relation is constructed by dividing the merge sort into its component operations: {\em Divide, Conquer and Combine}\footnote{Divide, Conquer and Combine is the way CLRS describes the separate stages of merge sort. I
 believe this is very clear and sensible and therefore have done the same here}:
 
 \begin{description}
 
 \item[Divide] \hfill \\
-The dividing process simply splits the array into two smaller sub arrays. This is clearly a very cheap operation, not needing anything more than a bit of pointer arithematic at most.
+The dividing process simply splits the array into two smaller sub arrays. This is a cheap operation since all that is needed is to calculate the existing address of the sub array in memory.
 
 \item[Conquer] \hfill \\
 Conquering consists of performing a recursive call on the two sub arrays created in the divide process. If the time taken to perform a merge sort on an array of size $n$ was $T(n)$ then the conquer process must perform this operation
 twice on two sub arrays of half the size, resulting in the term $2T({n \over 2})$.
 
 \item[Combine] \hfill \\
-The combining phase is of course the {\em merge} of the merge sort algorithm, which runs linearly through the two arrays, creating a larger merged and sorted array, in time $\Theta(n)$ for sub arrays of size $n$ each.
+The combining phase is the {\em merge} of the merge sort algorithm, which runs linearly through the two arrays, creating a larger merged and sorted array, in time $\Theta(n)$ for sub arrays of size $n$ each.
 
 \end{description}
 
-Solving this recurrance relation is relatively simple algebra with a little substitution:
+Solving this recurrence relation is relatively simple algebra with a little substitution:
 \begin{align*}
 T(n) &= 2T\left({n \over 2}\right) + \Theta(n) \\
 &= 2\left(2T\left({n \over 4}\right) + \Theta\left({n \over 2}\right)\right) + \Theta(n) \\
@@ -971,8 +984,8 @@ Letting k tend to m (approaching the smallest sub array size):
 \end{align*}
 
 This is the average running time of a serial merge sort and also the work of a parallel merge sort (where work is denoted $T_1$), therefore this value is the running time it should take a merge sort to complete on a single core. Given
-the opportunity to utilise many cores, there are subtle changes to the occurance relation. For my current implementation of merge sort, the merge operation still remains linear, therefore this term remains as $\Theta(n)$, however the
-recusive call is able to run on different cores simultaneously, therefore this term now becomes $T'({n \over 2})$ where $T'$ is the parallel merge sort time. Thus the recurrance relation looks like:
+the opportunity to utilise many cores, there are subtle changes to the occurrence relation. For my current implementation of merge sort, the merge operation still remains linear, therefore this term remains as $\Theta(n)$, however the
+recursive call is able to run on different cores simultaneously, therefore this term now becomes $T'({n \over 2})$ where $T'$ is the parallel merge sort time. Thus the recurrence relation looks like:
 
 \begin{align*}
 T'(n) &= T'\left({n \over 2}\right) + \Theta(n) \\
@@ -999,29 +1012,29 @@ Let k tend to m:
 \end{align*}
 
 Taking into consideration the ability to run the recursive calls on many processors, we have calculated the parallel merge sort average running time, which is also the span of a parallel merge sort (span denoted by $T_\infty$). So
-currently we have the results $T = T_{1} = \Theta(n\,lg\,n)$ and $T' = T_{\infty} = \Theta(n)$, for which we can use to calculate the theoretical speed up between serial and parallel merge sort:
+currently we have the results $T = T_{1} = \Theta(n\,lg\,n)$ and $T' = T_{\infty} = \Theta(n)$, for which we can use to calculate the theoretical speedup between serial and parallel merge sort:
 
 \begin{align*}
 \text{Speedup} = {T_{1} \over T_{\infty}} = {\Theta\left(n\,lg\,n\right) \over \Theta(n)} = \Theta(lg\,n)
 \end{align*}
 
-Therefore in fact we are expecting to see a logarithmic shaped graph as our speed up graph, which is exactly what figure~\ref{fig:msort_speedup_graph} shows us. Figure~\ref{fig:java_speedup_graph} shows a merge sort written in vanilla
-Java\cite{web:washington} with the same test parameters and the speed up results obtained from these tests which mirrors the results obtained from using the interface.
+Therefore in fact we are expecting to see a logarithmic shaped graph as our speedup graph, which is exactly what figure~\ref{fig:msort_speedup_graph} shows us. Figure~\ref{fig:java_speedup_graph} shows a parallel merge sort written
+in Java\cite{web:washington} with the same test parameters and the speedup results obtained from these tests which mirrors the results obtained from using the interface.
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{java_speedup_graph}
-\caption{The Java speedup graph, showing a merge sort written in Java, mirrors exactly what we have achieved by using the interface. The speedup in this graph plateau's at approximately 5 -- 5.5 which slightly greater than the
+\caption[Parallel Java Merge Sort Speedup Graph]{The Java speedup graph, showing a merge sort written in Java, mirrors exactly what we have achieved by using the interface. The speedup in this graph plateau's at approximately 5 -- 5.5 which slightly greater than the
 interface's merge sort results as would be expected since the interface constructed on a few layers and therefore will omit more overheads. This graph also includes a little jitter which is again due to the changes between the array's
 values in between each test.}
 \label{fig:java_speedup_graph}
 \end{figure}
-This is a very good sign to suggest that the interface is performing well. The vanilla Java merge sort reaches a peak speed up of around 5 whereas the interface provides a peak speed up between 3 and 4 which is a confident result for
+This is a very good sign to suggest that the interface is performing well. The normal Java merge sort reaches a peak speedup of around 5 whereas the interface provides a peak speedup between 3 and 4 which is a confident result for
 both the OCaml-Java compiler and the interface. 
 
 \subsubsection{Thread Scheduling Overhead}
 The last section dealt with understanding the speedup properties of the merge sort algorithm and comparing that to the test results achieved. One important aspect that wasn't taken into account is the overhead caused by the scheduler
 and how much that actually effects the computation time of the merge sort algorithm. We can determine the threading overheads in terms of the execution time of the merge sort by alternating the linear sort limit of the merge sort
 algorithm -- which is the maximum array size that will be sorted on one thread, i.e. linearly. For a smaller linear sort limit, the merge sort algorithm does less computation per core and more lightweight threads are created as there
-are more divisons of the array to be made before the linear sort limit is reached. However at some point we expect the lightweight threads to be sorting siginficant portions of the array such that the threading overheads are
+are more divisions of the array to be made before the linear sort limit is reached. However at some point we expect the lightweight threads to be sorting significant portions of the array such that the threading overheads are
 negligible. Increasing the linear sort limit again beyond this point will result in a longer execution time as the algorithm will not divide the data up enough to keep all worker threads continuously busy. It is the point at which the
 lightweight thread overheads become equal to the work done by the linear sorts which is important to us. At this point we can divide the execution cost roughly between thread scheduling and linear sort execution times in order to
 calculate the average overhead per thread. The point at which this occurs is roughly the of the point at which the speedup gains from increasing the linear sort length begin to plateau. Figure~\ref{fig:sort_limit_graph} shows the test
@@ -1029,7 +1042,11 @@ results collected from increasing the sort limit along the x~axis for an array s
 
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{sort_limit_graph}
-\caption{insert caption here}
+\caption[Merge Sort Linear Sort Limit Graph]{Sort limit graph showing the logarithmic increase in the linear sort limit on the x~axis along with it's effect on execution time on the y~axis. There is a steady decrease in execution time as the sort limit increases between
+16 and 256, (4 and 8 on the x~axis). After this point the execution time seems to plateau until $2^{22}$ linear sort limit at which point the execution time begins to rise again. The initial decline is caused by the worker threads
+performing more processing per thread which decreases the execution time. At the point of the plateau, the amount of work done by each thread is significant enough to keep all cores busy and the threading overheads negligible,
+therefore we do not see any change in the execution time. The final rise at the right of the graph occurs as the sort limit tends towards the size of the array, so in fact the array is not being divided up enough to keep all the cores
+busy.}
 \label{fig:sort_limit_graph}
 \end{figure}
 
@@ -1051,35 +1068,34 @@ There are subtle ways to improve the overheads without interfering with OCaml-Ja
 \section{Fibonacci}
 \label{sec:fibonacci}
 %
-% Talk about fibonacci in more detail. What it is, why it can be parallelised, etc
+% Talk about Fibonacci in more detail. What it is, why it can be parallelised, etc
 %
-Also mentioned in section~\ref{sec:profiling} was the recursive fibonacci algorithm for use in profiling the interface. The recursive algorithm is easily parallelised by spawning child threads at each recursive call until the base
+Also mentioned in section~\ref{sec:profiling} was the recursive Fibonacci algorithm for use in profiling the interface. The recursive algorithm is easily made parallel by spawning child threads at each recursive call until the base
 case is reached. Each thread spawned is placed onto the yield queue, until a worker thread is able to pick it up and either perform the base case calculation or process the next recursive step -- creating more threads on the yield
-queue. The parent thread will then synchronise on both child threads completing and use those results to calculate it's own fibonacci result. This propagates back up the fibonacci recursive tree until the final result is calculated
-and returned to the initial caller function. A graphical depiction of this process is shown in figure bla bla bla\todo{draw this fibonacci tree with threads put on thread queue}, furthermore listing bla \todo{add fibonacci code
-listing} contains the code which achieves the parallel fibonacci calculation in conjunction with listing blabla\todo{add normal fib listing here} which performs the same recursive fibonacci calculation within the LWT framework, but
-without LWT Threads.
+queue. The parent thread will then synchronise on both child threads completing and use those results to calculate it's own Fibonacci result. This propagates back up the Fibonacci recursive tree until the final result is calculated
+and returned to the initial caller function. The Fibonacci code used can be found in appendix~\ref{chap:code_samples} 
 
 \subsection{Performance Analysis}
 %
 % Fibonacci didn't show good parallelism, graph shown in fig whatever.
 %
 \subsubsection{Execution Time}
-The results of performance testing the recursive parallel fibonacci algorithm are displayed in figure~\ref{fig:fib_time_graph}.
+The results of performance testing the recursive parallel Fibonacci algorithm are displayed in figure~\ref{fig:fib_time_graph}.
 \begin{figure}[h!]
 \includegraphics[width=\linewidth]{fib_time_graph}
-\caption{insert caption here}
+\caption[Fibonacci Execution Time Graph]{The steeply rising line represents the parallel Fibonacci algorithm whereas the shallow line represents the single threaded Fibonacci algorithm. It is clear from this graph that despite having many cores available, the
+threading overheads entirely overshadow the potential for speedup.}
 \label{fig:fib_time_graph}
 \end{figure}
-This graph describes the execution time of the fibonacci algorithm where the x~axis denotes the fibonacci number being calculated and the y~axis denotes the time taken to calculate that fibonacci number. The graph clearly shows that
-calculating fibonacci on multiple cores actually performs worse than using the same recursive algorithm on a single core. This is highly counter intuitive under the assumption that more cores means more power. Although there are many
-more cores executing the fibonacci calculations, it would seem the overhead of managing many LWT threads is significant enough to completely negate any potential speed up gains from utilising multiple cores.
+This graph describes the execution time of the Fibonacci algorithm where the x~axis denotes the Fibonacci number being calculated and the y~axis denotes the time taken to calculate that Fibonacci number. The graph clearly shows that
+calculating Fibonacci on multiple cores actually performs worse than using the same recursive algorithm on a single core. This is highly counter intuitive under the assumption that more cores means more power. Although there are many
+more cores executing the Fibonacci calculations, it would seem the overhead of managing many LWT threads is significant enough to completely negate any potential speedup gains from utilising multiple cores.
 
 %
 % Why? Well its because fib does only an addition operation, therefore most of the processing goes into thread management overheads. made even worse since threads are small and made frequently (although actually I think it's made the
 % same in this case)
 %
-At ecah stage in the fibonacci calculation, a new thread is created for that recursive step. Once the thread is created, it is popped onto the yield queue and may sit there for a while until it is acquired by a worker thread to
+At each stage in the Fibonacci calculation, a new thread is created for that recursive step. Once the thread is created, it is popped onto the yield queue and may sit there for a while until it is acquired by a worker thread to
 perform execution. Within the calculation, the fib thread must bind on the result of both it's child threads and perform an addition. This bind operation consists of creating a closure containing an addition operation and the two
 child threads, such that when they both complete, the closure will be called with their return values and pass the result back up the chain. We discovered in the last section that the average running time for all these steps is
 roughly 0.11 ms which is a relatively significant amount of time. Furthermore all these extra steps are produced to simply perform a single addition operation which means the majority of the processing done on the worker thread is the
@@ -1087,7 +1103,7 @@ thread management rather than the algorithm processing.
 
 % \subsubsection{Speedup}
 % \todo{May remove this graph as I can't explain why more cores is worse even if parallelism isn't exploited, it should at least be the same...}
-% The speed up graph also shows poor results using the current interface scheduling technique, which is shown in figure~\ref{fig:fib_speedup_graph}.
+% The speedup graph also shows poor results using the current interface scheduling technique, which is shown in figure~\ref{fig:fib_speedup_graph}.
 % \begin{figure}[h!]
 % \includegraphics[width=\linewidth]{fib_speedup_graph}
 % \caption{insert caption here}
@@ -1099,7 +1115,7 @@ thread management rather than the algorithm processing.
 % 
 % The most sensible explanation of the results seems to be lock contention which the Fibonacci calculation exposes
 % might just remove this graph
-%The graph in figure blabla\todo{insert fib speed up graph} shows the relative speed up of calculating the value $fib(30)$ on a linearly increasing amount of cores, given by the x~axis. The data demonstrates a steep decline within
+%The graph in figure blabla\todo{insert fib speedup graph} shows the relative speedup of calculating the value $fib(30)$ on a linearly increasing amount of cores, given by the x~axis. The data demonstrates a steep decline within
 %the first two cores becoming enabled and then a steady and far more shallow decline beyond this point. Again a similar problem to that previously demontr
 
 %
@@ -1107,17 +1123,17 @@ thread management rather than the algorithm processing.
 %
 
 %
-% Possible ways of improving the result is to reduce the threading overhead somehow, perhaps by assigning processors to subtrees of the fibonacci calculation until every processor is in use, then allow them to calculate the rest of
+% Possible ways of improving the result is to reduce the threading overhead somehow, perhaps by assigning processors to subtrees of the Fibonacci calculation until every processor is in use, then allow them to calculate the rest of
 % the sub tree. That would involve using a different scheduling technique which was of course part of my extended options if time allowed.
 %
-Overall the fibonacci calculation has not scaled well with the current implementation of the interface, unlike the merge sort. However it may be possible to achieve better performance gains by using a different scheduling technique
+Overall the Fibonacci calculation has not scaled well with the current implementation of the interface, unlike the merge sort. However it may be possible to achieve better performance gains by using a different scheduling technique
 than the one currently in use. Furthermore the current implementation of the parallel Fibonacci continues to recurse until it reaches $fib(0)$ or $fib(1)$, by limiting the recursion depth of the Fibonacci algorithm in a similar
 fashion to the linear sort limit of the merge sort algorithm, we can combine more processing potential into a single lightweight thread and definitely achieve better results.
 
 \section{Summary}
 Within this chapter, I discussed how the merge sort algorithm was tested and also the performance of the merge sort algorithm when executed with the interface. The results obtained demonstrated the interface's true ability to utilise
-multiple cores and execute parallel LWT code with appropriate speedup gains, achieving a speedup of 3 -- 4 in comparrisson to a vanilla Java merge sort algorithm which achieved a speedup of 5 -- 5.5 with the same test parameters. The
-reason to the graph shape was proven as the theoretical speedup of the merge sort algorithm and was observed in both the interface parallel merge sort and the vanilla Java merge sort results. We also used the variation of the linear
+multiple cores and execute parallel LWT code with appropriate speedup gains, achieving a speedup of 3 -- 4 in comparison to a normal Java merge sort algorithm which achieved a speedup of 5 -- 5.5 with the same test parameters. The
+reason to the graph shape was proven as the theoretical speedup of the merge sort algorithm and was observed in both the interface parallel merge sort and the normal Java merge sort results. We also used the variation of the linear
 sort limit to determine the approximate thread management overhead of the lightweight threads, which resulted in 0.11 ms -- a good result considering OCaml-Java's approximately 33\% reduction in execution speed.
 
 The parallel Fibonacci algorithm provided somewhat different results as we discovered the recursive Fibonacci algorithm mainly exposed thread overhead times since the algorithm continues to recurse until it reaches $fib(0)$ or
@@ -1136,8 +1152,8 @@ $fib(1)$. However we determined that setting a recursion limit would move the ma
 % Achievements and what I would've liked to continue working on
 %
 \section{Lessons Learnt}
-The final result of my dissertation has been successful. I have managed to complete all my success criteria and produce an interface which performs well under popular parallel benchmarks such as merge sort. Admittedly taking on such a
-large OCaml code base with only little prior knowledge of ML was a feat I underanticipated. The languages have a few differences, however the styles of development in the two languages are very independent of each other. A lot of the
+The final result of my dissertation has been successful. I have managed to complete all my success criteria and produce an interface which scales similarly to natively written Java code when comparing popular parallel benchmarks such as merge sort. Admittedly taking on such a
+large OCaml code base with only little prior knowledge of ML was a feat I under anticipated. The languages have a few differences, however the styles of development in the two languages are very independent of each other. A lot of the
 focus in learning ML was put on developing algorithms and data structures, whereas OCaml's Core library contains most of these algorithms and has an emphasis on using them instead. Furthermore in languages like C++ and Java there are
 structured and tested ways of producing systems with low coupling and high cohesion via object oriented programming techniques and design patterns, however in OCaml you can choose to use the modular system, the object system, neither
 or a mixture of both\cite{chailloux2000}. 
@@ -1154,21 +1170,21 @@ depending on how the interface is implemented.
 
 \subsection{Public/Private Queues}
 In section~\ref{subsubsec:thread_safety} I mentioned the `Half-Baked Thread' problem which meant that useless yield threads were being placed onto the yield queue and immediately removed by other threads before having any useful
-bindings attached. One other solution to this problem I have thought about was to have a seperate private and public queue per worker thread. As a worker thread is executing some code within an LWT thread, it will place any created
+bindings attached. One other solution to this problem I have thought about was to have a separate private and public queue per worker thread. As a worker thread is executing some code within an LWT thread, it will place any created
 threads into its private queue, which may contain threads that are or are not able to be executed. No other worker thread may have access to the private queue of any other worker thread. Once an LWT thread has terminated, the private
 queue will contain the new spawned threads which resulted from the LWT threads execution, furthermore they will be in a state where they are all ready to execute. The worker thread must then move these ready threads to the public
 queue, all bar one, and begin execution of the one retained thread. By keeping all the threads in the private queue until the LWT thread has finished execution, there is no chance that another thread will come along and take the
-incomplete thread and begin executing it. Only threads on the public queue are able to be taken by other threads for execution.\todo{along with work stealing implementations, only locks on thread queues and not threads themselves,
-etc}.
+incomplete thread and begin executing it. Only threads on the public queue are able to be taken by other threads for execution.
 
 \bibliography{resources}
 
 \appendix
 \chapter{Notes}
 \section{Machine Specifications}
+\label{apdx:machine_specifications}
 The following are specifications for the machines used during the testing and development of the interface:
 
-\subsubsection{`Roo' Multicore Machine - Main Test Machine}
+\subsubsection{`Roo' Multi-core Machine - Main Test Machine}
 \begin{itemize}
 \item {\em Processor} \hfill \\
 AMD Opteron\texttrademark\ 6344 Processor (12 logical cores, 6 physical cores @ 2.6 GHz) ($\times4$)
@@ -1189,12 +1205,12 @@ Intel Core i7 (4 logical cores, 2 physical cores @ 2.6 GHz)
 The following appendix contains relevant code samples which have been referred to within my dissertation.
 
 \section{Recursive Parallel Fibonacci Implementation (fib.ml)}
-The recursive fibonacci algorithm was implemented 3 times in different ways in order to compare the vanilla, asynchronous and parallel versions for execution time, speed up and other relevent measurements. The following code listing
+The recursive Fibonacci algorithm was implemented 3 times in different ways in order to compare the normal, asynchronous and parallel versions for execution time, speedup and other relevant measurements. The following code listing
 shows each of these versions.
 \lstinputlisting[frame=none]{fib.ml}
 
 \section{Parallel Merge Sort Implementation (msort.ml)}
-Similar to the fibonacci implementation, the merge sort was also written in three different ways.
+Similar to the Fibonacci implementation, the merge sort was also written in three different ways.
 \lstinputlisting[frame=none]{msort.ml}
 
 \section{Worker Thread}

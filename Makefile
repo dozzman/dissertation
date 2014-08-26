@@ -37,4 +37,8 @@ diss.pdf: yield_queue.pdf thread_repr.pdf bind_callback.pdf
 	inkscape -A $*.pdf $<
 
 clean:
+	mkdir temp
+	cp fib_time_graph.pdf java_speedup_graph.pdf msort_speedup_graph.pdf sort_limit_graph.pdf temp/
 	rm *.log *.bbl *.fls *.pdf *.aux *.blg *.toc *.lof 2>/dev/null; exit 0
+	cp temp/* .
+	rm -r temp

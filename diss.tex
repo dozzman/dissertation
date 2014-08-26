@@ -88,7 +88,7 @@ Name:               & \bf Dorian Peake  \\
 College:            & \bf St John's College                     \\
 Project Title:      & \bf Parallelism under OCaml using the JVM  \\
 Examination:        & \bf Computer Science Tripos, July 2014        \\
-Word Count:         & \bf TBC  \\
+Word Count:         & \bf 9939  \\
 Project Originator: & Dorian Peake                    \\
 Supervisor:         & Jeremy Yallop                   \\ 
 \end{tabular}
@@ -120,10 +120,14 @@ does not contain material that has already been used to any substantial
 extent for a comparable purpose.
 
 \bigskip
-\leftline{Signed [signature]}
+\bigskip
+\bigskip
+\leftline{Signed}
 
-\medskip
-\leftline{Date [date]}
+\bigskip
+\bigskip
+\bigskip
+\leftline{Date}
 
 \cleardoublepage
 
@@ -401,8 +405,6 @@ Java.call} on the {\tt hashCode} method and the {\tt equals} method.  Whilst the
 their own defining types within OCaml in order to cooperate appropriately with the OCaml type system. The typing scheme introduced maps a Java Object to an OCaml type {\tt 'a java\_instance} where {\tt 'a} is a Java class.  Classes
 are denoted within OCaml by replacing dots with single quotes to abide by the OCaml syntactic rules\cite{web:clerc2013}, therefore as an example, the equivalent OCaml type for {\tt java.lang.Object} would be {\tt java'lang'Object
 java\_instance}.
-\hfill\\
-\hfill\\
 
 \section{Choice of Tools}
 \label{sec:choice_of_tools}
@@ -720,7 +722,7 @@ Assembling an appropriate profiling suite to test the newly implemented function
 profiling compatibility\cite{leroy2013}, however this is clearly unavailable since we are compiling to Java bytecode using OCaml-Java. There is no one single Java profiler tool such as gprof, however there are many open source
 alternatives. These are highly configurable and complex software suites which allow a lot of configuration -- most of which I wouldn't need. For the purpose of profiling this project, I would simply require an accurate timer to
 determine the time taken to complete a function so that these times may be compared and the values used in speedup calculations in chapter~\ref{chap:evaluation}. Taking this into consideration, I wrote a very simple timer module in
-OCaml using Java's high-resolution time source via {\tt java.lang.System.nanoTime}. In fact, determining function running time is a typical use of the nanoTime method, as shown by the fact that within the Java documentation example
+OCaml using Java's high-resolution time source via {\tt java.lang.System.nanoTime}. In fact, determining function running time is a typical use of the {\tt nanoTime} method, as shown by the fact that within the Java documentation example
 code is given for exactly that purpose. Listing~\ref{lst:timer} shows some of the commands used within the simple timer module.
 \hfill\\
 \lstinputlisting[caption={Timer module function types},label={lst:timer}]{timer.mli}
